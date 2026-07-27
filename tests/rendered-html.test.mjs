@@ -36,6 +36,7 @@ test("server-renders the Império IA product shell", async () => {
   assert.match(html, /Assistente operacional/);
   assert.match(html, /INSS · Portabilidade/);
   assert.match(html, /Base de roteiros/);
+  assert.match(html, /Calculadora/);
   assert.match(html, /15(?:<!-- -->)? bancos INSS/);
   assert.match(html, /PRONTO PARA ANALISAR/);
   assert.match(html, /Leitura automática ativa/);
@@ -71,6 +72,9 @@ test("keeps the real client case and source PDFs out of the app", async () => {
   assert.match(page, /extractPdfText/);
   assert.match(page, /analyzeInssExtract/);
   assert.match(page, /loadingTask\.destroy\(\)/);
+  assert.match(page, /calculateCitizenFinancing/);
+  assert.match(page, /Calculadora do Cidadão/);
+  assert.match(page, /Abrir versão oficial/);
   assert.doesNotMatch(page, /pdf\.destroy\(\)/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.doesNotMatch(page, /const contracts|Cliente anonimizado|Caso demonstrativo/);

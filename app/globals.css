@@ -814,6 +814,48 @@ button {
   gap: 12px;
 }
 
+.contract-heading-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.65rem;
+}
+
+.c6-contract-simulate {
+  align-items: center;
+  background: #111;
+  border: 0;
+  border-bottom: 3px solid #ffd900;
+  border-radius: 9px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.76rem;
+  font-weight: 850;
+  gap: 0.45rem;
+  min-height: 2.15rem;
+  padding: 0.4rem 0.72rem;
+  white-space: nowrap;
+}
+
+.c6-contract-simulate span {
+  color: #ffd900;
+  font-size: 0.67rem;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+.c6-contract-simulate:hover {
+  background: #252525;
+  transform: translateY(-1px);
+}
+
+.c6-contract-simulate:disabled {
+  cursor: wait;
+  opacity: 0.65;
+  transform: none;
+}
+
 .contract-number {
   min-width: 0;
   display: flex;
@@ -3015,7 +3057,7 @@ a:focus-visible {
   border-radius: 13px;
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: minmax(0, 1.4fr) minmax(9rem, 0.8fr) minmax(7rem, 0.45fr);
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   margin-top: 1.35rem;
   padding: 1rem;
 }
@@ -3449,6 +3491,20 @@ a:focus-visible {
 
   .c6-card-heading {
     flex-direction: column;
+  }
+
+  .contract-analysis-heading,
+  .contract-heading-actions {
+    align-items: flex-start;
+  }
+
+  .contract-analysis-heading {
+    flex-direction: column;
+  }
+
+  .contract-heading-actions {
+    flex-wrap: wrap;
+    width: 100%;
   }
 
   .c6-detected-client {

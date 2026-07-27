@@ -142,6 +142,10 @@ Não é necessário instalar extensão, abrir outra aba ou digitar novamente o C
 O acesso bancário fica somente nas variáveis secretas do servidor e nunca é
 enviado ao navegador nem incluído no GitHub.
 
+Cada contrato de origem C6 também exibe o botão **Simular no C6**. Quando há
+mais de uma parcela, o sistema envia número do contrato e valor da parcela para
+selecionar a linha correta no portal.
+
 O perfil utilizado no C6 precisa exibir
 **Cadastro > Proposta Consignado**. A credencial deve ser exclusiva da
 integração: se o mesmo usuário estiver conectado em outra estação, o sistema

@@ -5,6 +5,8 @@ import {
   buildPostBody,
   controlName,
   hrefById,
+  findIdMatching,
+  findIdsEnding,
   parseC6Offers,
   postbackTargetForId,
   selectOptions,
@@ -49,6 +51,14 @@ test("localiza controles, opções e alvo de postback do portal", () => {
     <a id="matricula" href="javascript:__doPostBack('ctl00$matricula','')">
       123456
     </a>
+    <a
+      id="grade_ctl03_lnkCodigo"
+      href="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ctl00$grade$ctl03$lnkCodigo&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, true))"
+    >
+      987654
+    </a>
+    <input id="grade_ctl02_chkRefin" name="contrato1" />
+    <input id="grade_ctl03_chkRefin" name="contrato2" />
   `;
 
   assert.equal(controlName(html, "operacao"), "ctl00$operacao");
@@ -65,6 +75,22 @@ test("localiza controles, opções e alvo de postback do portal", () => {
     "/WebAutorizador/Proposta.aspx",
   );
   assert.equal(postbackTargetForId(html, "matricula"), "ctl00$matricula");
+  assert.equal(
+    postbackTargetForId(html, "grade_ctl03_lnkCodigo"),
+    "ctl00$grade$ctl03$lnkCodigo",
+  );
+  assert.deepEqual(findIdsEnding(html, "_chkRefin", "input"), [
+    "grade_ctl02_chkRefin",
+    "grade_ctl03_chkRefin",
+  ]);
+  assert.equal(
+    findIdMatching(html, /grvHomo_ctl\d+_lnkCodigo/i, "a"),
+    "",
+  );
+  assert.equal(
+    findIdMatching(html, /grade_ctl\d+_lnkCodigo/i, "a"),
+    "grade_ctl03_lnkCodigo",
+  );
 });
 
 test("converte a grade de condições do C6 no retorno do site", () => {

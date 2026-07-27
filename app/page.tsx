@@ -1391,6 +1391,7 @@ function C6RefinView({
 */
 function AutomaticC6RefinView({
   analysis,
+  selectedContract,
   state,
   message,
   offers,
@@ -1399,10 +1400,11 @@ function AutomaticC6RefinView({
   onBack,
 }: {
   analysis: AnalysisResult | null;
+  selectedContract: ContractAnalysis | null;
   state: C6SimulationState;
   message: string;
   offers: C6Offer[];
-  onRun: (cpf: string) => void;
+  onRun: (cpf: string, contract?: ContractAnalysis) => void;
   onSelectExtract: () => void;
   onBack: () => void;
 }) {
@@ -1473,6 +1475,12 @@ function AutomaticC6RefinView({
                 <span>Contratos C6</span>
                 <strong>{c6Contracts.length}</strong>
               </div>
+              {selectedContract ? (
+                <div>
+                  <span>Parcela em simulação</span>
+                  <strong>{formatMoney(selectedContract.installment)}</strong>
+                </div>
+              ) : null}
             </div>
           ) : (
             <button className="c6-auto-upload" onClick={onSelectExtract}>
@@ -1505,7 +1513,12 @@ function AutomaticC6RefinView({
           </div>
 
           {state === "error" && canSimulate ? (
-            <button className="c6-retry" onClick={() => onRun(cpf)}>
+            <button
+              className="c6-retry"
+              onClick={() =>
+                onRun(cpf, selectedContract ?? c6Contracts[0])
+              }
+            >
               Tentar simulação novamente
             </button>
           ) : null}
@@ -1632,6 +1645,8 @@ export default function Home() {
   const [c6State, setC6State] = useState<C6SimulationState>("idle");
   const [c6Message, setC6Message] = useState("");
   const [c6Offers, setC6Offers] = useState<C6Offer[]>([]);
+  const [c6SelectedContract, setC6SelectedContract] =
+    useState<ContractAnalysis | null>(null);
   const [updatedBanks, setUpdatedBanks] = useState<string[]>([]);
   const [expandedRule, setExpandedRule] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
@@ -1669,20 +1684,30 @@ export default function Home() {
     setQuestion(text);
   }
 
-  async function runC6Simulation(cpf: string) {
+  async function runC6Simulation(
+    cpf: string,
+    contract?: ContractAnalysis,
+  ) {
     const requestId = c6RequestRef.current + 1;
     c6RequestRef.current = requestId;
+    setC6SelectedContract(contract ?? null);
     setC6State("running");
     setC6Offers([]);
     setC6Message(
-      "Entrando no C6, localizando a matrícula e calculando as condições…",
+      contract
+        ? `Simulando no C6 a parcela de ${formatMoney(contract.installment)}…`
+        : "Entrando no C6, localizando a matrícula e calculando as condições…",
     );
 
     try {
       const response = await fetch("/api/c6/refin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cpf: cpf.replace(/\D/g, "") }),
+        body: JSON.stringify({
+          cpf: cpf.replace(/\D/g, ""),
+          contractNumber: contract?.contractNumber ?? "",
+          installment: contract?.installment ?? 0,
+        }),
       });
       const payload = (await response.json()) as {
         ok?: boolean;
@@ -1734,6 +1759,7 @@ export default function Home() {
     setC6State("idle");
     setC6Message("");
     setC6Offers([]);
+    setC6SelectedContract(null);
     setMessages([]);
     setUploadState("reading");
     setUploadMessage("Lendo o extrato e identificando os contratos…");
@@ -1757,11 +1783,11 @@ export default function Home() {
         },
       ]);
 
-      const hasC6Contract = result.contracts.some(isC6OwnContract);
-      if (hasC6Contract) {
+      const firstC6Contract = result.contracts.find(isC6OwnContract);
+      if (firstC6Contract) {
         setView("simulations");
         if (validateCpf(result.client.cpf)) {
-          void runC6Simulation(result.client.cpf);
+          void runC6Simulation(result.client.cpf, firstC6Contract);
         } else {
           setC6State("error");
           setC6Message(
@@ -1809,6 +1835,7 @@ export default function Home() {
             setC6State("idle");
             setC6Message("");
             setC6Offers([]);
+            setC6SelectedContract(null);
             if (uploadRef.current) uploadRef.current.value = "";
             setView("chat");
           }}
@@ -2115,15 +2142,48 @@ export default function Home() {
                               <p>Nº {contract.contractNumber}</p>
                             </div>
                           </div>
-                          <StatusPill
-                            kind={
-                              contract.possible.length ? "approved" : "review"
-                            }
-                          >
-                            {contract.possible.length
-                              ? `${contract.possible.length} possibilidade(s)`
-                              : "Requer revisão"}
-                          </StatusPill>
+                          <div className="contract-heading-actions">
+                            {isC6OwnContract(contract) ? (
+                              <button
+                                type="button"
+                                className="c6-contract-simulate"
+                                disabled={c6State === "running"}
+                                onClick={() => {
+                                  setView("simulations");
+                                  if (validateCpf(analysis.client.cpf)) {
+                                    void runC6Simulation(
+                                      analysis.client.cpf,
+                                      contract,
+                                    );
+                                  } else {
+                                    setC6SelectedContract(contract);
+                                    setC6State("error");
+                                    setC6Message(
+                                      "O CPF do extrato não pôde ser validado para a simulação C6.",
+                                    );
+                                  }
+                                }}
+                              >
+                                <span>C6</span>
+                                {c6State === "running" &&
+                                c6SelectedContract?.contractNumber ===
+                                  contract.contractNumber
+                                  ? "Simulando…"
+                                  : "Simular no C6"}
+                              </button>
+                            ) : null}
+                            <StatusPill
+                              kind={
+                                contract.possible.length
+                                  ? "approved"
+                                  : "review"
+                              }
+                            >
+                              {contract.possible.length
+                                ? `${contract.possible.length} possibilidade(s)`
+                                : "Requer revisão"}
+                            </StatusPill>
+                          </div>
                         </div>
 
                         <div className="contract-metrics">
@@ -2553,10 +2613,11 @@ export default function Home() {
       ) : view === "simulations" ? (
         <AutomaticC6RefinView
           analysis={analysis}
+          selectedContract={c6SelectedContract}
           state={c6State}
           message={c6Message}
           offers={c6Offers}
-          onRun={(cpf) => void runC6Simulation(cpf)}
+          onRun={(cpf, contract) => void runC6Simulation(cpf, contract)}
           onSelectExtract={() => uploadRef.current?.click()}
           onBack={() => setView("chat")}
         />

@@ -471,9 +471,17 @@ async function handleC6Simulation(request: Request, env: Env) {
     );
   }
 
-  let body: { cpf?: unknown };
+  let body: {
+    cpf?: unknown;
+    contractNumber?: unknown;
+    installment?: unknown;
+  };
   try {
-    body = (await request.json()) as { cpf?: unknown };
+    body = (await request.json()) as {
+      cpf?: unknown;
+      contractNumber?: unknown;
+      installment?: unknown;
+    };
   } catch {
     return jsonResponse(
       {
@@ -493,6 +501,8 @@ async function handleC6Simulation(request: Request, env: Env) {
     const result = await simulateC6Refinancing(
       {
         cpf: String(body.cpf || ""),
+        contractNumber: String(body.contractNumber || ""),
+        installment: Number(body.installment || 0),
         user: env.C6_CONSIG_USER,
         password: env.C6_CONSIG_PASSWORD,
       },
@@ -508,7 +518,9 @@ async function handleC6Simulation(request: Request, env: Env) {
             ? 409
             : error.code === "C6_NO_CONTRACT" ||
                 error.code === "C6_NO_INSTALLMENT" ||
-                error.code === "C6_NO_OFFERS"
+                error.code === "C6_NO_OFFERS" ||
+                error.code === "C6_CONTRACT_NOT_FOUND" ||
+                error.code === "C6_REGISTRATION_NOT_FOUND"
               ? 422
               : error.code === "C6_NOT_CONFIGURED" ||
                   error.code === "C6_NO_PERMISSION"

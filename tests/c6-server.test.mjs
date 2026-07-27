@@ -51,17 +51,21 @@ test("executa o fluxo WebForms completo e retorna as ofertas", async () => {
   const cpfId =
     "ctl00_Cph_UcPrp_FIJN1_JnDadosIniciais_UcDIni_txtCPF_CAMPO";
   const registrationId =
-    "ctl00_cph_FIJanela1_FIJanelaPanel1_grvHomo_ctl02_lnkCodigo";
+    "ctl00_cph_FIJanela1_FIJanelaPanel1_grvHomo_ctl03_lnkCodigo";
   const installmentId =
     "ctl00_Cph_UcPrp_FIJN1_JnSimulacao_UcSimulacaoSnt_FIJanela1_FIJanelaPanel1_txtVlrParcela_CAMPO";
   const termId =
     "ctl00_Cph_UcPrp_FIJN1_JnSimulacao_UcSimulacaoSnt_FIJanela1_FIJanelaPanel1_cbxPrazo_CAMPO";
   const resultsId =
     "ctl00_Cph_UcPrp_FIJN1_JnSimulacao_UcSimulacaoSnt_FIJanela1_FIJanelaPanel1_grdCondicoes";
-  const contractId =
+  const firstContractId =
     "ctl00_Cph_UcPrp_FIJN1_JnRefinReneg_UcRefin_FIJN1_JnCR_grdOperacoes_ctl02_chkRefin";
-  const contractInstallmentId =
+  const firstContractInstallmentId =
     "ctl00_Cph_UcPrp_FIJN1_JnRefinReneg_UcRefin_FIJN1_JnCR_grdOperacoes_ctl02_lblValorParcela";
+  const contractId =
+    "ctl00_Cph_UcPrp_FIJN1_JnRefinReneg_UcRefin_FIJN1_JnCR_grdOperacoes_ctl03_chkRefin";
+  const contractInstallmentId =
+    "ctl00_Cph_UcPrp_FIJN1_JnRefinReneg_UcRefin_FIJN1_JnCR_grdOperacoes_ctl03_lblValorParcela";
 
   const portal = fakePortal([
     page(`
@@ -100,7 +104,10 @@ test("executa o fluxo WebForms completo e retorna as ofertas", async () => {
     `),
     page(`<input id="${cpfId}" name="ctl00$cpf" value="" />`),
     page(`
-      <a id="${registrationId}" href="javascript:__doPostBack('ctl00$matricula','')">
+      <a
+        id="${registrationId}"
+        href="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ctl00$matricula$ctl03$lnkCodigo&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, true))"
+      >
         123456
       </a>
     `),
@@ -115,12 +122,22 @@ test("executa o fluxo WebForms completo e retorna as ofertas", async () => {
       </a>
     `),
     page(`
-      <table><tr>
-        <td>
-          <input id="${contractId}" name="ctl00$contrato" value="on" />
-          <span id="${contractInstallmentId}">420,00</span>
-        </td>
-      </tr></table>
+      <table>
+        <tr>
+          <td>
+            <input type="checkbox" id="${firstContractId}" name="ctl00$contrato1" value="on" />
+            <span id="${firstContractInstallmentId}">100,00</span>
+            Contrato 111111111
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <input type="checkbox" id="${contractId}" name="ctl00$contrato2" value="on" />
+            <span id="${contractInstallmentId}">420,00</span>
+            Contrato 90159392776
+          </td>
+        </tr>
+      </table>
     `),
     page(`<input id="${installmentId}" name="ctl00$parcela" value="0,00" />`),
     page(`
@@ -148,6 +165,8 @@ test("executa o fluxo WebForms completo e retorna as ofertas", async () => {
   const result = await simulateC6Refinancing(
     {
       cpf: "52998224725",
+      contractNumber: "90159392776",
+      installment: 420,
       user: "usuario_teste",
       password: "senha_teste",
     },
@@ -170,6 +189,8 @@ test("executa o fluxo WebForms completo e retorna as ofertas", async () => {
   assert.match(portal.calls[1].body, /EUsuario%24CAMPO=usuario_teste/);
   assert.match(portal.calls[1].cookie, /ASP\.NET_SessionId=sessao-teste/);
   assert.match(portal.calls[7].body, /ctl00%24cpf=529\.982\.247-25/);
+  assert.match(portal.calls[11].body, /ctl00%24contrato2=on/);
+  assert.doesNotMatch(portal.calls[11].body, /ctl00%24contrato1=on/);
 });
 
 test("não força a desconexão de outra sessão do C6", async () => {

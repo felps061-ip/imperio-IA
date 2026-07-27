@@ -36,21 +36,32 @@ test("server-renders the Império IA product shell", async () => {
   assert.match(html, /Assistente operacional/);
   assert.match(html, /INSS · Portabilidade/);
   assert.match(html, /Base de roteiros/);
-  assert.match(html, /Há rota objetiva para <strong>7<\/strong>/);
+  assert.match(html, /12 bancos INSS/);
+  assert.match(html, /NENHUM CLIENTE CARREGADO/);
+  assert.match(html, /iCred/);
+  assert.match(html, /Finanto/);
+  assert.match(html, /C6 Bank/);
+  assert.match(html, /Happy/);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview/);
 });
 
-test("keeps sensitive source PDFs and starter artifacts out of the app", async () => {
+test("keeps the real client case and source PDFs out of the app", async () => {
   const [page, layout, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /Cliente anonimizado/);
-  assert.match(page, /Benefício •••\.•••\.585-3/);
   assert.match(layout, /Império IA/);
   assert.match(layout, /og\.png/);
+  assert.match(page, /bank: "iCred"/);
+  assert.match(page, /bank: "Finanto"/);
+  assert.match(page, /bank: "Digio"/);
+  assert.match(page, /bank: "Daycoval"/);
+  assert.match(page, /bank: "C6 Bank"/);
+  assert.match(page, /bank: "BRB"/);
+  assert.match(page, /bank: "Happy"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
-  assert.doesNotMatch(page, /102\.689\.298-82|LUIZ CARLOS RAMOS/);
+  assert.doesNotMatch(page, /const contracts|Cliente anonimizado|Caso demonstrativo/);
+  assert.doesNotMatch(page, /Benefício •|Agibank|Cobuccio/);
 });

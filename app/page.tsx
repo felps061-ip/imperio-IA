@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 
 type View = "chat" | "rules";
 type ChatMessage = {
@@ -10,100 +10,6 @@ type ChatMessage = {
 };
 type UploadState = "idle" | "reading" | "ready" | "error";
 
-type Contract = {
-  bank: string;
-  code: string;
-  payoff: number;
-  installment: number;
-  paid: number;
-  total: number;
-  contract: string;
-};
-
-const contracts: Contract[] = [
-  {
-    bank: "Agibank",
-    code: "121",
-    payoff: 13104.71,
-    installment: 337.44,
-    paid: 22,
-    total: 84,
-    contract: "•••• 6280",
-  },
-  {
-    bank: "Cobuccio",
-    code: "402",
-    payoff: 2637.19,
-    installment: 60,
-    paid: 3,
-    total: 96,
-    contract: "•••• 2245",
-  },
-  {
-    bank: "Agibank",
-    code: "121",
-    payoff: 3318.48,
-    installment: 75,
-    paid: 17,
-    total: 96,
-    contract: "•••• 7029",
-  },
-  {
-    bank: "Agibank",
-    code: "121",
-    payoff: 2027.37,
-    installment: 45.82,
-    paid: 17,
-    total: 96,
-    contract: "•••• 7033",
-  },
-  {
-    bank: "Agibank",
-    code: "121",
-    payoff: 4335.7,
-    installment: 97.99,
-    paid: 17,
-    total: 96,
-    contract: "•••• 7028",
-  },
-  {
-    bank: "Agibank",
-    code: "121",
-    payoff: 3318.48,
-    installment: 75,
-    paid: 17,
-    total: 96,
-    contract: "•••• 7032",
-  },
-  {
-    bank: "C6 Consig",
-    code: "626",
-    payoff: 6774.96,
-    installment: 142,
-    paid: 3,
-    total: 96,
-    contract: "•••• 2776",
-  },
-  {
-    bank: "Pan",
-    code: "623",
-    payoff: 977.89,
-    installment: 69.06,
-    paid: 68,
-    total: 84,
-    contract: "•••• 0001",
-  },
-  {
-    bank: "Facta",
-    code: "935",
-    payoff: 4818.81,
-    installment: 101,
-    paid: 3,
-    total: 96,
-    contract: "•••• 3520",
-  },
-];
-
 const rulebooks = [
   {
     bank: "Quali",
@@ -111,7 +17,8 @@ const rulebooks = [
     version: "v1.0",
     updated: "06 mai 2026",
     scope: "INSS · Empréstimo",
-    rules: 31,
+    status: "active",
+    criteria: "Idade · saldo · prazo",
     detail:
       "Saldo, parcelas pagas, bancos de origem, idade final e espécies de invalidez.",
   },
@@ -121,7 +28,8 @@ const rulebooks = [
     version: "mai/26",
     updated: "05 mai 2026",
     scope: "INSS · Empréstimo",
-    rules: 44,
+    status: "active",
+    criteria: "Origem · parcela · margem",
     detail:
       "Mínimo por banco de origem, margem negativa, prazo e limite por idade.",
   },
@@ -131,7 +39,8 @@ const rulebooks = [
     version: "19/05",
     updated: "19 mai 2026",
     scope: "INSS · Empréstimo",
-    rules: 39,
+    status: "active",
+    criteria: "Espécie · idade · margem",
     detail:
       "Espécies, faixa etária, margem, mínimo pago e confirmação pós-averbação.",
   },
@@ -141,7 +50,8 @@ const rulebooks = [
     version: "117",
     updated: "18 mai 2026",
     scope: "INSS · Empréstimo",
-    rules: 36,
+    status: "active",
+    criteria: "Espécie · prazo · margem",
     detail:
       "Espécies, idade, prazo, margem negativa e condições de formalização.",
   },
@@ -151,9 +61,87 @@ const rulebooks = [
     version: "v04",
     updated: "mai 2026",
     scope: "INSS · Empréstimo",
-    rules: 28,
+    status: "active",
+    criteria: "Idade · valor · produto",
     detail:
       "Público, faixa etária, valor máximo, refinanciamento e documentação.",
+  },
+  {
+    bank: "iCred",
+    color: "lime",
+    version: "V20",
+    updated: "09 mar 2026",
+    scope: "INSS · Empréstimo",
+    status: "active",
+    criteria: "Idade · benefício · produto",
+    detail:
+      "Prazo de até 96 meses, política etária, espécies, margem e regras de portabilidade.",
+  },
+  {
+    bank: "Finanto",
+    color: "emerald",
+    version: "23/03",
+    updated: "23 mar 2026",
+    scope: "INSS · Empréstimo",
+    status: "active",
+    criteria: "Saldo · parcela · pagas",
+    detail:
+      "Tabelas por produto, saldo e parcela mínimos, parcelas pagas e margem negativa.",
+  },
+  {
+    bank: "Digio",
+    color: "navy",
+    version: "V21",
+    updated: "02 mar 2026",
+    scope: "INSS · Empréstimo",
+    status: "active",
+    criteria: "Espécie · idade · origem",
+    detail:
+      "Espécies elegíveis, invalidez a partir de 60 anos, bancos de origem e limites.",
+  },
+  {
+    bank: "Daycoval",
+    color: "aqua",
+    version: "V70.0",
+    updated: "18 fev 2026",
+    scope: "INSS · Empréstimo",
+    status: "active",
+    criteria: "Idade · invalidez · CIP",
+    detail:
+      "Prazo de até 96 meses, idade, invalidez, portabilidade e saldo devedor via CIP.",
+  },
+  {
+    bank: "C6 Bank",
+    color: "black",
+    version: "jul/25",
+    updated: "jul 2025",
+    scope: "INSS · Empréstimo",
+    status: "active",
+    criteria: "Produto · origem · invalidez",
+    detail:
+      "Margem livre, refinanciamento, portabilidade, bancos não aceitos e regras de invalidez.",
+  },
+  {
+    bank: "BRB",
+    color: "royal",
+    version: "jan/26",
+    updated: "jan 2026",
+    scope: "INSS · Empréstimo",
+    status: "active",
+    criteria: "Idade · margem · portabilidade",
+    detail:
+      "Público, benefícios, política etária, valores máximos e regras por produto.",
+  },
+  {
+    bank: "Happy",
+    color: "turquoise",
+    version: "V03",
+    updated: "14 nov 2025",
+    scope: "INSS · Empréstimo",
+    status: "active",
+    criteria: "Idade final · produto · valor",
+    detail:
+      "Produtos, espécies, idade final, prazo de até 96 meses e portabilidade com refin.",
   },
   {
     bank: "Facta",
@@ -161,118 +149,38 @@ const rulebooks = [
     version: "26/05",
     updated: "26 mai 2026",
     scope: "SIAPE · Próxima fase",
-    rules: 0,
+    status: "cataloged",
+    criteria: "Base separada",
     detail:
       "Documento catalogado e separado do motor INSS para evitar cruzamento de regras.",
   },
 ];
 
-const money = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
-
-function calculateMonthlyRate(
-  balance: number,
-  installment: number,
-  remaining: number,
-) {
-  if (remaining <= 0 || installment <= 0 || balance <= 0) return 0;
-  if (installment * remaining <= balance) return 0;
-
-  let low = 0;
-  let high = 0.1;
-
-  for (let index = 0; index < 80; index += 1) {
-    const rate = (low + high) / 2;
-    const presentValue =
-      (installment * (1 - Math.pow(1 + rate, -remaining))) / rate;
-    if (presentValue > balance) low = rate;
-    else high = rate;
-  }
-
-  return ((low + high) / 2) * 100;
-}
-
-function getQualiStatus(contract: Contract) {
-  if (contract.code === "626") {
-    return { kind: "blocked", label: "Não opera", note: "C6 não portado" };
-  }
-  if (contract.payoff < 2000) {
-    return { kind: "blocked", label: "Não opera", note: "Saldo abaixo de R$ 2 mil" };
-  }
-  if (contract.payoff < 6000 && contract.paid < 15) {
-    return { kind: "blocked", label: "Não opera", note: "Exige 15 pagas" };
-  }
-  return { kind: "approved", label: "Opera", note: "Critérios objetivos atendidos" };
-}
-
-function getFactaStatus(contract: Contract) {
-  if (contract.code === "935") {
-    return { kind: "blocked", label: "Não opera", note: "Carteira própria" };
-  }
-  const minimumPaid: Record<string, number> = {
-    "121": 15,
-    "623": 30,
-    "626": 12,
-  };
-  const minimum = minimumPaid[contract.code] ?? 0;
-  if (contract.paid < minimum) {
-    return {
-      kind: "blocked",
-      label: "Não opera",
-      note: `Exige ${minimum} pagas`,
-    };
-  }
-  if (contract.installment < 50) {
-    return {
-      kind: "review",
-      label: "Revisar",
-      note: "Parcela abaixo de R$ 50",
-    };
-  }
-  return { kind: "approved", label: "Opera", note: "Critérios objetivos atendidos" };
-}
-
-function bestRoute(contract: Contract) {
-  const facta = getFactaStatus(contract);
-  const quali = getQualiStatus(contract);
-  if (facta.kind === "approved" && quali.kind === "approved") {
-    return { kind: "approved", label: "Facta · Quali" };
-  }
-  if (facta.kind === "approved") return { kind: "approved", label: "Facta" };
-  if (quali.kind === "approved") return { kind: "approved", label: "Quali" };
-  if (facta.kind === "review") return { kind: "review", label: "Facta · revisar" };
-  return { kind: "review", label: "PAN · Banrisul revisar" };
-}
-
 function assistantReply(question: string) {
   const normalized = question.toLocaleLowerCase("pt-BR");
 
-  if (normalized.includes("taxa")) {
-    return "A taxa foi recalculada pela fórmula financeira, usando quitação, parcela e número de parcelas restantes. No contrato Agibank de R$ 337,44, a taxa calculada é 1,63% a.m. — não usei a taxa aproximada impressa no extrato.";
-  }
-  if (normalized.includes("c6")) {
-    return "O C6 de R$ 142,00 não tem rota automática agora: a Quali não porta banco 626; a Facta exige 12 parcelas pagas e o contrato tem 3; o BMG não aceita a margem negativa atual. PAN e Banrisul ficam em revisão de tabela comercial.";
-  }
-  if (normalized.includes("bmg")) {
-    return "No BMG, idade e espécie passam, e o mínimo geral é 1 parcela paga. Porém, o roteiro não permite portabilidade com margem negativa. Como a margem disponível é -R$ 126,49, a operação fica bloqueada até regularização.";
-  }
-  if (normalized.includes("quali")) {
-    return "Na Quali, cinco contratos Agibank passam: o saldo acima de R$ 6 mil exige 1 paga; entre R$ 2 mil e R$ 5.999,99 exige 15 pagas. C6 é banco não portado e o contrato PAN está abaixo do saldo mínimo.";
-  }
-  if (normalized.includes("facta")) {
-    return "Na Facta, Agibank exige 15 pagas, PAN exige 30 e C6 exige 12. A margem negativa é aceita. Neste caso, seis contratos passam automaticamente e um Agibank de R$ 45,82 fica para revisão por parcela mínima.";
+  if (
+    normalized.includes("bancos") ||
+    normalized.includes("cadastrados") ||
+    normalized.includes("roteiros")
+  ) {
+    return "A base INSS tem 12 bancos ativos: Quali, Facta, BMG, PAN, Banrisul, iCred, Finanto, Digio, Daycoval, C6 Bank, BRB e Happy. O roteiro SIAPE da Facta está catalogado separadamente para a próxima fase.";
   }
   if (
-    normalized.includes("onde") ||
-    normalized.includes("opera") ||
-    normalized.includes("port")
+    normalized.includes("novos") ||
+    normalized.includes("adicionados") ||
+    normalized.includes("chegaram")
   ) {
-    return "Há rota objetiva para 7 dos 9 contratos: Facta é a opção mais ampla e Quali também recebe 5 contratos Agibank. O C6 está bloqueado pelas regras atuais; o contrato Facta depende de outro destino e de tabela comercial.";
+    return "Foram adicionados sete roteiros INSS, cada um com sua própria versão: iCred V20, Finanto 23/03, Digio V21, Daycoval V70.0, C6 jul/25, BRB jan/26 e Happy V03.";
+  }
+  if (normalized.includes("margem negativa")) {
+    return "A margem negativa varia por produto e banco. Nos novos roteiros, a Finanto informa que não opera; o iCred permite tratamento apenas em condições específicas de refinanciamento ou portabilidade; e o Daycoval prevê abatimento somente no refinanciamento. A decisão final ainda depende da operação e da versão vigente.";
+  }
+  if (normalized.includes("taxa")) {
+    return "Quando a leitura automática estiver conectada, a taxa será recalculada com parcela, saldo de quitação e parcelas restantes. A taxa aproximada impressa no extrato será mantida apenas como referência.";
   }
 
-  return "Posso responder sobre elegibilidade, taxa, saldo, prazo, espécie e regras de cada banco. Para manter a análise segura, vou me limitar ao caso carregado e aos roteiros ativos.";
+  return "Posso explicar as regras dos 12 bancos INSS cadastrados — idade, espécie, prazo, saldo, parcelas pagas, margem e portabilidade. Para analisar um cliente, comece anexando o extrato em PDF.";
 }
 
 function StatusPill({
@@ -298,25 +206,6 @@ export default function Home() {
   const uploadRef = useRef<HTMLInputElement>(null);
   const ruleUploadRef = useRef<HTMLInputElement>(null);
   const [pendingBank, setPendingBank] = useState<string | null>(null);
-
-  const enrichedContracts = useMemo(
-    () =>
-      contracts.map((contract) => ({
-        ...contract,
-        remaining: contract.total - contract.paid,
-        rate: calculateMonthlyRate(
-          contract.payoff,
-          contract.installment,
-          contract.total - contract.paid,
-        ),
-        route: bestRoute(contract),
-      })),
-    [],
-  );
-
-  const approvedCount = enrichedContracts.filter(
-    (contract) => contract.route.kind === "approved",
-  ).length;
 
   function submitQuestion(event: FormEvent) {
     event.preventDefault();
@@ -363,12 +252,12 @@ export default function Home() {
 
     setFileName(file.name);
     setUploadState("reading");
-    setUploadMessage("Preparando o caso e protegendo os dados exibidos…");
+    setUploadMessage("Preparando o documento no navegador…");
 
     window.setTimeout(() => {
       setUploadState("ready");
       setUploadMessage(
-        "Arquivo associado ao caso demonstrativo. Nenhum dado foi armazenado.",
+        "PDF selecionado. A extração automática será conectada ao módulo de IA.",
       );
     }, 1100);
   }
@@ -414,7 +303,7 @@ export default function Home() {
           >
             <span className="nav-icon">◫</span>
             Atendimento
-            <span className="nav-count">1</span>
+            <span className="nav-count">0</span>
           </button>
           <button
             className={view === "rules" ? "active" : ""}
@@ -422,26 +311,22 @@ export default function Home() {
           >
             <span className="nav-icon">≡</span>
             Roteiros
-            <span className="nav-count">6</span>
+            <span className="nav-count">13</span>
           </button>
         </nav>
 
         <div className="sidebar-section">
           <p>RECENTES</p>
-          <button className="recent active">
+          <button className="recent">
             <span className="recent-dot" />
             <span>
-              Caso INSS · demonstração
-              <small>Espécie 42 · 9 contratos</small>
-            </span>
-          </button>
-          <button className="recent">
-            <span className="recent-dot muted" />
-            <span>
               Base de roteiros
-              <small>5 bancos INSS ativos</small>
+              <small>12 bancos INSS ativos</small>
             </span>
           </button>
+          <div className="recent-empty">
+            Nenhum atendimento salvo
+          </div>
         </div>
 
         <div className="sidebar-profile">
@@ -478,9 +363,9 @@ export default function Home() {
           </header>
 
           <div className="demo-banner">
-            <span>Prévia funcional</span>
-            O cálculo e o motor de regras estão ativos. A leitura automática de
-            novos PDFs será conectada à IA na etapa de produção.
+            <span>Base atualizada</span>
+            12 bancos INSS estão catalogados. A leitura automática de novos
+            extratos será conectada ao módulo de IA na etapa de produção.
           </div>
 
           <div className="chat-layout">
@@ -533,7 +418,7 @@ export default function Home() {
                   </strong>
                   <small>
                     {uploadMessage ||
-                      "PDF de até 15 MB · os dados do exemplo são anonimizados"}
+                      "PDF de até 15 MB · o arquivo não é enviado nesta prévia"}
                   </small>
                 </span>
                 <span className="upload-action">
@@ -541,113 +426,29 @@ export default function Home() {
                 </span>
               </button>
 
-              <div className="case-divider">
-                <span>Caso demonstrativo · dados protegidos</span>
-              </div>
-
-              <div className="message assistant-message">
-                <div className="assistant-avatar">I</div>
-                <div className="message-body wide">
-                  <div className="message-meta">
-                    <strong>Império IA</strong>
-                    <span>análise concluída</span>
+              <div className="empty-analysis">
+                <div className="empty-analysis-icon">⌁</div>
+                <span className="mini-label">NENHUM CLIENTE CARREGADO</span>
+                <h2>O atendimento começa com um extrato</h2>
+                <p>
+                  Assim que a leitura automática for conectada, a análise seguirá
+                  três etapas rastreáveis:
+                </p>
+                <div className="empty-steps">
+                  <div>
+                    <span>1</span>
+                    <strong>Extrair</strong>
+                    <small>benefício, cliente e contratos</small>
                   </div>
-                  <p>
-                    Identifiquei <strong>9 contratos</strong>. Há rota objetiva
-                    para <strong>{approvedCount}</strong> deles nas regras atuais.
-                    A Facta é o destino mais amplo; a Quali recebe cinco contratos
-                    Agibank.
-                  </p>
-
-                  <div className="analysis-summary">
-                    <div>
-                      <span className="metric-icon success">✓</span>
-                      <span>
-                        <strong>7</strong>
-                        com rota possível
-                      </span>
-                    </div>
-                    <div>
-                      <span className="metric-icon warning">!</span>
-                      <span>
-                        <strong>2</strong>
-                        precisa revisar
-                      </span>
-                    </div>
-                    <div>
-                      <span className="metric-icon info">≡</span>
-                      <span>
-                        <strong>5</strong>
-                        roteiros ativos
-                      </span>
-                    </div>
+                  <div>
+                    <span>2</span>
+                    <strong>Calcular</strong>
+                    <small>taxa, prazo e saldo restante</small>
                   </div>
-
-                  <div className="result-card">
-                    <div className="result-card-header">
-                      <div>
-                        <span className="mini-label">MELHOR ROTA</span>
-                        <h2>Facta · 6 operações automáticas</h2>
-                      </div>
-                      <StatusPill kind="approved">Margem negativa aceita</StatusPill>
-                    </div>
-                    <ul className="rule-checks">
-                      <li>
-                        <span>✓</span>
-                        Agibank com 15 ou mais parcelas pagas
-                      </li>
-                      <li>
-                        <span>✓</span>
-                        PAN com 68 pagas supera o mínimo de 30
-                      </li>
-                      <li className="warning">
-                        <span>!</span>
-                        Parcela de R$ 45,82 requer revisão do mínimo
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="contracts-block">
-                    <div className="block-heading">
-                      <h3>Contrato a contrato</h3>
-                      <span>taxa recalculada</span>
-                    </div>
-                    <div className="contracts-table">
-                      <div className="contract-row contract-head">
-                        <span>Origem · contrato</span>
-                        <span>Parcela</span>
-                        <span>Prazo</span>
-                        <span>Taxa</span>
-                        <span>Rota</span>
-                      </div>
-                      {enrichedContracts.map((contract) => (
-                        <div
-                          className="contract-row"
-                          key={`${contract.bank}-${contract.contract}`}
-                        >
-                          <span className="bank-cell">
-                            <b>{contract.bank}</b>
-                            <small>{contract.contract}</small>
-                          </span>
-                          <span>{money.format(contract.installment)}</span>
-                          <span>
-                            {contract.paid}/{contract.total}
-                          </span>
-                          <span>{contract.rate.toFixed(2).replace(".", ",")}%</span>
-                          <span>
-                            <StatusPill kind={contract.route.kind}>
-                              {contract.route.label}
-                            </StatusPill>
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="source-note">
-                    <span>i</span>
-                    Pré-triagem baseada nos roteiros enviados. Saldo CIP, tabela
-                    comercial e aprovação do banco continuam obrigatórios.
+                  <div>
+                    <span>3</span>
+                    <strong>Comparar</strong>
+                    <small>cada parcela com os 12 bancos</small>
                   </div>
                 </div>
               </div>
@@ -696,37 +497,19 @@ export default function Home() {
 
             <aside className="context-panel">
               <div className="context-heading">
-                <span>Contexto da análise</span>
+                <span>Contexto do atendimento</span>
                 <button aria-label="Fechar contexto">×</button>
               </div>
 
-              <div className="client-card">
-                <div className="client-top">
-                  <div className="client-avatar">LC</div>
-                  <div>
-                    <strong>Cliente anonimizado</strong>
-                    <span>Benefício •••.•••.585-3</span>
-                  </div>
-                  <StatusPill kind="approved">INSS</StatusPill>
+              <div className="context-empty-card">
+                <span>＋</span>
+                <div>
+                  <strong>Nenhum extrato carregado</strong>
+                  <small>
+                    Os dados cadastrais e financeiros aparecerão aqui depois da
+                    leitura.
+                  </small>
                 </div>
-                <dl>
-                  <div>
-                    <dt>Espécie</dt>
-                    <dd>42 · Tempo de contribuição</dd>
-                  </div>
-                  <div>
-                    <dt>Idade</dt>
-                    <dd>68 anos</dd>
-                  </div>
-                  <div>
-                    <dt>UF</dt>
-                    <dd>SP</dd>
-                  </div>
-                  <div>
-                    <dt>Margem</dt>
-                    <dd className="negative">-R$ 126,49</dd>
-                  </div>
-                </dl>
               </div>
 
               <div className="context-section">
@@ -735,8 +518,10 @@ export default function Home() {
                   <button onClick={() => setView("rules")}>Gerenciar</button>
                 </div>
                 <div className="bank-list">
-                  {rulebooks.slice(0, 5).map((rulebook) => (
-                    <div key={rulebook.bank}>
+                  {rulebooks
+                    .filter((rulebook) => rulebook.status === "active")
+                    .map((rulebook) => (
+                    <div key={`${rulebook.bank}-${rulebook.scope}`}>
                       <span className={`bank-logo ${rulebook.color}`}>
                         {rulebook.bank.slice(0, 1)}
                       </span>
@@ -757,19 +542,19 @@ export default function Home() {
                 <div className="extraction-list">
                   <div>
                     <span>Dados cadastrais</span>
-                    <b>8 campos</b>
+                    <b>Aguardando</b>
                   </div>
                   <div>
                     <span>Dados bancários</span>
-                    <b>4 campos</b>
+                    <b>Aguardando</b>
                   </div>
                   <div>
                     <span>Dados financeiros</span>
-                    <b>6 campos</b>
+                    <b>Aguardando</b>
                   </div>
                   <div>
                     <span>Contratos</span>
-                    <b>9 linhas</b>
+                    <b>Aguardando</b>
                   </div>
                 </div>
               </div>
@@ -778,14 +563,14 @@ export default function Home() {
 
           <footer className="composer-wrap">
             <div className="prompt-chips">
-              <button onClick={() => askShortcut("Onde cada parcela opera?")}>
-                Onde cada parcela opera?
+              <button onClick={() => askShortcut("Quais bancos estão cadastrados?")}>
+                Quais bancos estão cadastrados?
               </button>
-              <button onClick={() => askShortcut("Por que o C6 não opera?")}>
-                Por que o C6 não opera?
+              <button onClick={() => askShortcut("Quem opera margem negativa?")}>
+                Quem opera margem negativa?
               </button>
-              <button onClick={() => askShortcut("Como a taxa foi calculada?")}>
-                Como calculou a taxa?
+              <button onClick={() => askShortcut("Quais roteiros foram adicionados?")}>
+                Quais roteiros foram adicionados?
               </button>
             </div>
             <form className="composer" onSubmit={submitQuestion}>
@@ -798,10 +583,10 @@ export default function Home() {
                 ＋
               </button>
               <input
-                aria-label="Pergunta sobre o caso"
+                aria-label="Pergunta operacional"
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
-                placeholder="Pergunte sobre este caso…"
+                placeholder="Pergunte sobre as regras INSS…"
               />
               <span className="scope-label">INSS</span>
               <button
@@ -853,17 +638,17 @@ export default function Home() {
           <div className="rules-content">
             <div className="rules-overview">
               <div>
-                <span>5</span>
+                <span>12</span>
                 <p>
                   <strong>Bancos INSS ativos</strong>
                   prontos para consulta
                 </p>
               </div>
               <div>
-                <span>178</span>
+                <span>12</span>
                 <p>
-                  <strong>Regras catalogadas</strong>
-                  com origem rastreável
+                  <strong>Bases versionadas</strong>
+                  sem misturar os bancos
                 </p>
               </div>
               <div>
@@ -900,9 +685,11 @@ export default function Home() {
                         <p>{rulebook.scope}</p>
                       </div>
                       <StatusPill
-                        kind={rulebook.rules > 0 ? "approved" : "neutral"}
+                        kind={
+                          rulebook.status === "active" ? "approved" : "neutral"
+                        }
                       >
-                        {rulebook.rules > 0 ? "Ativo" : "Catalogado"}
+                        {rulebook.status === "active" ? "Ativo" : "Catalogado"}
                       </StatusPill>
                     </div>
 
@@ -916,14 +703,14 @@ export default function Home() {
                         <strong>{isUpdated ? "agora" : rulebook.updated}</strong>
                       </div>
                       <div>
-                        <span>Regras</span>
-                        <strong>{rulebook.rules || "—"}</strong>
+                        <span>Critérios</span>
+                        <strong>{rulebook.criteria}</strong>
                       </div>
                     </div>
 
                     <p className="rulebook-description">{rulebook.detail}</p>
 
-                    {isExpanded && rulebook.rules > 0 && (
+                    {isExpanded && rulebook.status === "active" && (
                       <ul className="expanded-rules">
                         <li>Faixa etária e prazo máximo</li>
                         <li>Espécies aceitas e impedidas</li>

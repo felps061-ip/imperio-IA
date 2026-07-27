@@ -473,19 +473,43 @@ function assistantReply(
       "taxa do contrato",
     ]);
 
+  const greetingPhrases = new Set([
+    "oi",
+    "ola",
+    "oi tudo bem",
+    "ola tudo bem",
+    "bom dia",
+    "boa tarde",
+    "boa noite",
+    "e ai",
+    "salve",
+    "saudacoes",
+  ]);
+
+  if (greetingPhrases.has(normalized)) {
+    return analysis
+      ? "Olá! Como posso ajudar com esta análise? Você pode perguntar sobre contratos, margem, taxas, bancos possíveis ou motivos de bloqueio."
+      : "Olá! Como posso ajudar? Faça uma pergunta sobre bancos, regras, portabilidade, margem ou refinanciamento. Para analisar um cliente, você também pode anexar o extrato INSS.";
+  }
+
   if (
     includesAny(normalized, [
-      "oi",
-      "olá",
-      "bom dia",
-      "boa tarde",
-      "boa noite",
+      "obrigado",
+      "obrigada",
+      "valeu",
+      "agradeço",
+      "agradeco",
     ]) &&
-    normalized.split(" ").length <= 4
+    normalized.split(" ").length <= 6
   ) {
-    return analysis
-      ? `Olá! O extrato já está analisado. Posso resumir os ${analysis.contracts.length} contrato(s), mostrar bancos possíveis, explicar bloqueios, margem, saldo, parcelas ou taxas.`
-      : "Olá! Posso explicar os roteiros INSS e, depois que você anexar um extrato, analisar contratos, taxas, margem e possibilidades de portabilidade.";
+    return "Por nada! Se precisar, faça outra pergunta sobre consignado ou envie um extrato para análise.";
+  }
+
+  if (
+    includesAny(normalized, ["tchau", "até mais", "ate mais", "até logo"]) &&
+    normalized.split(" ").length <= 5
+  ) {
+    return "Até mais! Quando precisar, estarei aqui para ajudar com as regras e análises de consignado.";
   }
 
   if (
@@ -497,7 +521,9 @@ function assistantReply(
       "comandos",
     ])
   ) {
-    return "Eu consulto os roteiros INSS cadastrados e explico regras, taxa teto, prazo, margem e refinanciamento. Com um extrato anexado, também resumo o cliente, contratos, saldo, parcelas, taxas, bancos possíveis e motivos de bloqueio.";
+    return analysis
+      ? "Posso ajudar com: resumo dos contratos, margem, saldo de quitação, parcelas, taxas, bancos possíveis e motivos de bloqueio. Faça uma pergunta específica sobre o que deseja consultar."
+      : "Posso ajudar com: bancos cadastrados, regras INSS, taxa teto, prazo, margem, portabilidade e refinanciamento. Para consultar um cliente, anexe o extrato INSS.";
   }
 
   if (!analysis && needsExtract) {

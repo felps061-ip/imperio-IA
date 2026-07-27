@@ -13,11 +13,20 @@ roteiros operacionais cadastrados.
 
 ## Acesso ao sistema
 
-O ambiente privado publicado está disponível em:
+O sistema publicado está disponível em:
 
 [Acessar o Império IA](https://imperio-ia-consignado.grupo-imperio.chatgpt.site)
 
-Pode ser necessário entrar com a conta autorizada para visualizar o sistema.
+Qualquer pessoa com o endereço pode abrir a tela inicial, mas o conteúdo do
+sistema exige um token válido fornecido pelo Grupo Império.
+
+Os tokens:
+
+- são validados no servidor;
+- não ficam expostos no código ou no GitHub;
+- permanecem válidos até serem removidos ou substituídos;
+- criam uma sessão protegida por cookie seguro durante sete dias;
+- podem ser encerrados pelo botão **Sair**.
 
 ## Principais funcionalidades
 
@@ -37,6 +46,7 @@ Pode ser necessário entrar com a conta autorizada para visualizar o sistema.
 - Chat direcionado a dúvidas de crédito consignado.
 - Calculadora do Cidadão integrada.
 - Interface responsiva para computador e celular.
+- Tela de acesso protegida por token.
 
 ## Bancos cadastrados
 
@@ -120,6 +130,10 @@ pela CIP.
 - Casos reais e dados pessoais de clientes não devem ser adicionados ao
   repositório.
 - O projeto não possui integração ativa com o Bevi Ajuda.
+- Tokens válidos são armazenados somente como hashes.
+- A chave utilizada para assinar a sessão fica nas variáveis protegidas da
+  hospedagem.
+- A página de acesso limita tentativas repetidas no mesmo ponto de conexão.
 
 ## Requisitos para desenvolvimento
 
@@ -162,7 +176,19 @@ npm test
 
 # Verificar a qualidade do código
 npm run lint
+
+# Gerar uma nova lista privada com 10 tokens
+npm run access:generate -- 10
 ```
+
+O comando de geração cria:
+
+- `outputs/tokens-acesso-imperio.txt`: lista privada para distribuição;
+- `.dev.vars`: hashes dos tokens e segredo da sessão para desenvolvimento.
+
+Esses arquivos são ignorados pelo Git e nunca devem ser enviados ao GitHub. Ao
+trocar a lista de tokens, as variáveis protegidas da hospedagem também precisam
+ser atualizadas.
 
 ## Estrutura principal
 
@@ -175,13 +201,17 @@ app/
 lib/
   inss-extrato.mjs            Parser do extrato e motor de regras
   citizen-calculator.mjs      Cálculos de prestações fixas
+  token-auth.mjs              Validação de tokens e assinatura de sessão
 
 tests/
   inss-parser.test.mjs        Testes de extração e comparação bancária
   citizen-calculator.test.mjs Testes da calculadora
+  token-auth.test.mjs         Testes da autenticação
   rendered-html.test.mjs      Testes de renderização e privacidade
 
 public/                       Identidade visual da Império
+scripts/                      Geração segura da lista de tokens
+worker/index.ts               Proteção de acesso no servidor
 .openai/hosting.json          Configuração da hospedagem
 ```
 

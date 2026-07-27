@@ -1,30 +1,110 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
+const testToken = "IMP-TEST-0123-4567-89AB-CDEF-0123-4567-89AB-CDEF";
+const testEnvironment = {
+  ASSETS: {
+    fetch: async () => new Response("Not found", { status: 404 }),
+  },
+  IMPERIO_ACCESS_TOKEN_HASHES: `TEST:${createHash("sha256")
+    .update(testToken)
+    .digest("hex")}`,
+  IMPERIO_ACCESS_COOKIE_SECRET:
+    "segredo-de-teste-com-mais-de-trinta-e-dois-caracteres",
+};
+const testContext = {
+  waitUntil() {},
+  passThroughOnException() {},
+};
+
+async function loadWorker() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
+  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}-${Math.random()}`);
   const { default: worker } = await import(workerUrl.href);
+  return worker;
+}
+
+async function render() {
+  const worker = await loadWorker();
+  const loginResponse = await worker.fetch(
+    new Request("http://localhost/auth/token", {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        token: testToken,
+        return_to: "/",
+      }),
+    }),
+    testEnvironment,
+    testContext,
+  );
+  assert.equal(loginResponse.status, 303);
+  const sessionCookie = loginResponse.headers.get("set-cookie")?.split(";")[0];
+  assert.ok(sessionCookie);
 
   return worker.fetch(
     new Request("http://localhost/", {
       headers: {
         accept: "text/html",
+        cookie: sessionCookie,
         host: "localhost",
       },
     }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
+    testEnvironment,
+    testContext,
   );
 }
+
+test("protects the application with the server-side token gate", async () => {
+  const worker = await loadWorker();
+  const anonymousResponse = await worker.fetch(
+    new Request("http://localhost/"),
+    testEnvironment,
+    testContext,
+  );
+  assert.equal(anonymousResponse.status, 303);
+  assert.match(
+    anonymousResponse.headers.get("location") ?? "",
+    /^\/acesso\?return_to=/,
+  );
+
+  const accessResponse = await worker.fetch(
+    new Request("http://localhost/acesso"),
+    testEnvironment,
+    testContext,
+  );
+  assert.equal(accessResponse.status, 200);
+  assert.match(await accessResponse.text(), /Informe seu token/);
+
+  const invalidResponse = await worker.fetch(
+    new Request("http://localhost/auth/token", {
+      method: "POST",
+      body: new URLSearchParams({ token: "TOKEN-INVALIDO" }),
+    }),
+    testEnvironment,
+    testContext,
+  );
+  assert.equal(invalidResponse.status, 303);
+  assert.match(invalidResponse.headers.get("location") ?? "", /erro=token/);
+
+  const externalReturnResponse = await worker.fetch(
+    new Request("http://localhost/auth/token", {
+      method: "POST",
+      body: new URLSearchParams({
+        token: testToken,
+        return_to: "//site-malicioso.example",
+      }),
+    }),
+    testEnvironment,
+    testContext,
+  );
+  assert.equal(externalReturnResponse.status, 303);
+  assert.equal(externalReturnResponse.headers.get("location"), "/");
+});
 
 test("server-renders the Império IA product shell", async () => {
   const response = await render();

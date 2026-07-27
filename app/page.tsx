@@ -1207,9 +1207,13 @@ export default function Home() {
           <div className="avatar">OP</div>
           <div>
             <strong>Operador</strong>
-            <span>Ambiente privado</span>
+            <span>Acesso por token</span>
           </div>
-          <button aria-label="Mais opções">•••</button>
+          <form action="/auth/logout" method="post">
+            <button type="submit" aria-label="Encerrar sessão">
+              Sair
+            </button>
+          </form>
         </div>
       </aside>
 

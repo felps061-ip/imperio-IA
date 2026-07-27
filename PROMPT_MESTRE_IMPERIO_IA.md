@@ -88,7 +88,9 @@ O chat é complementar. Ele serve para perguntas como:
 - O projeto deve ficar no GitHub.
 - Repositório: `https://github.com/felps061-ip/imperio-IA`
 - Branch principal: `main`
-- Site privado publicado: `https://imperio-ia-consignado.grupo-imperio.chatgpt.site`
+- Site publicado: `https://imperio-ia-consignado.grupo-imperio.chatgpt.site`
+- Qualquer pessoa com o link pode abrir a tela de acesso, mas o sistema somente
+  é liberado após a validação de um token fornecido pelo Grupo Império.
 - O roteiro Facta SIAPE deve permanecer catalogado separadamente do motor INSS.
 - Regra desconhecida nunca deve virar aprovação automática.
 - Conflitos entre documentos devem ser resolvidos considerando:
@@ -1342,8 +1344,17 @@ Não misturar:
 - Preferir processamento local.
 - Não registrar conteúdo sensível em logs.
 - Não exibir tokens, credenciais ou segredos.
+- Nunca colocar os tokens válidos ou o segredo da sessão no código, no GitHub,
+  no HTML ou no JavaScript enviado ao navegador.
+- Guardar somente hashes SHA-256 dos tokens nas variáveis protegidas da
+  hospedagem.
+- Validar tokens e sessões no servidor.
+- Usar cookie de sessão `HttpOnly`, `SameSite=Strict` e `Secure` em produção.
+- Limitar tentativas repetidas de autenticação.
+- Permitir encerramento explícito da sessão.
 - PDFs dos roteiros podem ser resumidos em regras estruturadas; não é necessário publicar os arquivos originais no GitHub.
-- O site deve permanecer privado, salvo autorização explícita para mudar o acesso.
+- O endereço pode ser público porque esta mudança foi autorizada pelo usuário,
+  desde que a barreira de token esteja funcionando antes da abertura do acesso.
 
 ---
 
@@ -1367,8 +1378,12 @@ Arquivos principais:
 - `app/globals.css`: design responsivo;
 - `lib/inss-extrato.mjs`: parser, taxa e motor de regras;
 - `lib/citizen-calculator.mjs`: cálculos de financiamento com prestações fixas;
+- `lib/token-auth.mjs`: validação dos tokens e assinatura da sessão;
+- `worker/index.ts`: barreira de acesso antes da aplicação;
+- `scripts/generate-access-tokens.mjs`: geração e rotação da lista de tokens;
 - `tests/inss-parser.test.mjs`: testes do parser e decisões;
 - `tests/citizen-calculator.test.mjs`: testes dos quatro cálculos da calculadora;
+- `tests/token-auth.test.mjs`: testes de token, sessão e cookies;
 - `tests/rendered-html.test.mjs`: teste de renderização e privacidade;
 - `types/pdf-worker.d.ts`: declaração do worker PDF;
 - `.openai/hosting.json`: vínculo da hospedagem.
@@ -1389,6 +1404,10 @@ Manter e ampliar testes para:
 - cálculo de taxa;
 - cálculo de meses, taxa, prestação e valor financiado;
 - validação de exatamente um campo vazio na calculadora;
+- bloqueio de visitantes sem sessão;
+- aceitação de token válido;
+- rejeição de token inválido;
+- rejeição de sessão adulterada ou expirada;
 - comparação com 15 bancos;
 - espécie consignável;
 - espécie não consignável;

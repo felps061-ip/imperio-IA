@@ -351,27 +351,163 @@ async function extractPdfText(file: File) {
   return pageTexts.join("\n");
 }
 
-function assistantReply(question: string, analysis: AnalysisResult | null) {
-  const normalized = question.toLocaleLowerCase("pt-BR");
+function normalizeChatText(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/[^\p{L}\p{N}%]+/gu, " ")
+    .trim();
+}
+
+function includesAny(text: string, terms: string[]) {
+  return terms.some((term) => text.includes(normalizeChatText(term)));
+}
+
+function assistantReply(
+  question: string,
+  analysis: AnalysisResult | null,
+  history: ChatMessage[] = [],
+) {
+  const normalized = normalizeChatText(question);
   const activeRulebooks = rulebooks.filter(
     (rulebook) => rulebook.status === "active",
   );
-  const mentionedBank = activeRulebooks.find((rulebook) =>
-    normalized.includes(rulebook.bank.toLocaleLowerCase("pt-BR")),
+  const bankAliases: Record<string, string[]> = {
+    "C6 Bank": ["c6", "c6 bank"],
+    iCred: ["icred", "i cred"],
+    "Quero Mais Crédito": ["quero mais", "quero mais credito"],
+    "Total Cash": ["total cash", "totalcash"],
+  };
+  const findMentionedBank = (text: string) =>
+    activeRulebooks.find((rulebook) => {
+      const aliases = [
+        rulebook.bank,
+        ...(bankAliases[rulebook.bank] ?? []),
+      ].map(normalizeChatText);
+      return aliases.some((alias) => text.includes(alias));
+    });
+  const previousContext = normalizeChatText(
+    history
+      .slice(-4)
+      .map((message) => message.text)
+      .join(" "),
   );
-  const asksRefinancing =
-    normalized.includes("refinanciamento de carteira") ||
-    normalized.includes("refin de carteira") ||
-    normalized.includes("retenção");
+  const isFollowUp = includesAny(normalized, [
+    "por que",
+    "porque",
+    "e esse",
+    "e nele",
+    "e nesse",
+    "esse banco",
+    "essa opção",
+    "detalhe",
+    "explique",
+  ]);
+  const mentionedBank =
+    findMentionedBank(normalized) ??
+    (isFollowUp ? findMentionedBank(previousContext) : undefined);
+  const asksRefinancing = includesAny(normalized, [
+    "refinanciamento de carteira",
+    "refin de carteira",
+    "retenção",
+    "refinanciar no mesmo banco",
+  ]);
+  const asksClientData = includesAny(normalized, [
+    "cliente",
+    "nome",
+    "idade",
+    "benefício",
+    "cpf",
+    "dados cadastrais",
+  ]);
+  const asksContracts = includesAny(normalized, [
+    "quantos contratos tem",
+    "quantos contratos foram",
+    "quantos contratos encontrou",
+    "contratos encontrados",
+    "resumo dos contratos",
+    "quais contratos",
+    "contrato do cliente",
+  ]);
+  const asksBankCatalog = includesAny(normalized, [
+    "bancos cadastrados",
+    "quais roteiros",
+    "base de bancos",
+    "lista de bancos",
+  ]);
+  const asksRoutes = includesAny(normalized, [
+    "onde",
+    "porta",
+    "opera",
+    "aceita",
+    "qual banco",
+    "quais bancos",
+    "melhor banco",
+    "melhores opções",
+    "possibilidades",
+    "rotas",
+  ]);
+  const asksBlocked = includesAny(normalized, [
+    "bloque",
+    "não aceita",
+    "não opera",
+    "impedido",
+    "reprov",
+    "motivo",
+    "por que",
+    "porque",
+  ]);
+  const needsExtract =
+    asksClientData ||
+    asksContracts ||
+    (asksRoutes && !asksBankCatalog) ||
+    asksBlocked ||
+    includesAny(normalized, [
+      "margem do cliente",
+      "saldo",
+      "quitação",
+      "parcela",
+      "pagas",
+      "restantes",
+      "taxa do contrato",
+    ]);
+
+  if (
+    includesAny(normalized, [
+      "oi",
+      "olá",
+      "bom dia",
+      "boa tarde",
+      "boa noite",
+    ]) &&
+    normalized.split(" ").length <= 4
+  ) {
+    return analysis
+      ? `Olá! O extrato já está analisado. Posso resumir os ${analysis.contracts.length} contrato(s), mostrar bancos possíveis, explicar bloqueios, margem, saldo, parcelas ou taxas.`
+      : "Olá! Posso explicar os roteiros INSS e, depois que você anexar um extrato, analisar contratos, taxas, margem e possibilidades de portabilidade.";
+  }
+
+  if (
+    includesAny(normalized, [
+      "o que você faz",
+      "como funciona",
+      "pode fazer",
+      "ajuda",
+      "comandos",
+    ])
+  ) {
+    return "Eu consulto os roteiros INSS cadastrados e explico regras, taxa teto, prazo, margem e refinanciamento. Com um extrato anexado, também resumo o cliente, contratos, saldo, parcelas, taxas, bancos possíveis e motivos de bloqueio.";
+  }
+
+  if (!analysis && needsExtract) {
+    return "Para responder isso com os dados reais do cliente, anexe primeiro o extrato INSS em PDF. Depois posso analisar contratos, margem, saldo, parcelas, taxas e bancos possíveis.";
+  }
 
   if (
     !asksRefinancing &&
     mentionedBank &&
-    (normalized.includes("digitar") ||
-      normalized.includes("simular") ||
-      normalized.includes("passo") ||
-      normalized.includes("fluxo") ||
-      normalized.includes("portal"))
+    includesAny(normalized, ["digitar", "simular", "passo", "fluxo", "portal"])
   ) {
     return (
       operationalGuide(mentionedBank.bank) ??
@@ -389,39 +525,122 @@ function assistantReply(question: string, analysis: AnalysisResult | null) {
     return "O refinanciamento de carteira só pode ser feito no mesmo banco do contrato ativo. Informe o banco para eu responder mínimo de parcelas pagas, troco, parcela e tratamento da margem.";
   }
 
+  if (!analysis && mentionedBank) {
+    return `${mentionedBank.bank} · ${mentionedBank.scope} · roteiro ${mentionedBank.version}, atualizado em ${mentionedBank.updated}. Critérios principais: ${mentionedBank.criteria}. ${mentionedBank.detail}`;
+  }
+
   if (analysis && mentionedBank) {
     const decisions = analysis.contracts.slice(0, 4).map((contract) => {
       const decision = contract.offers.find(
         (item) => item.bank === mentionedBank.bank,
       );
-      return `${contract.bank} ${formatMoney(contract.installment)}: ${statusLabel(decision?.status ?? "review")} - ${decision?.reason ?? "exige revisão"}`;
+      return `${contract.bank} · parcela ${formatMoney(contract.installment)}: ${statusLabel(decision?.status ?? "review")} — ${decision?.reason ?? "exige revisão"}`;
     });
-    return decisions.join(" | ");
+    return `${mentionedBank.bank}: ${decisions.join(" | ")}`;
   }
 
-  if (analysis && normalized.includes("espécie")) {
+  if (analysis && asksClientData) {
+    const { client, financial } = analysis;
+    return `Cliente: ${client.name || "não identificado"} · CPF ${maskDocument(client.cpf) || "não identificado"} · benefício ${maskDocument(client.benefit) || "não identificado"} · ${client.ageYears} anos e ${client.ageMonths} meses · espécie ${client.speciesCode || "não identificada"} (${client.species}). Benefício de ${formatMoney(financial.benefitValue)} e margem disponível de ${formatMoney(financial.availableMargin)}.`;
+  }
+
+  if (analysis && asksContracts) {
+    if (!analysis.contracts.length) {
+      return "Não encontrei contratos de empréstimo no extrato anexado.";
+    }
+    const summary = analysis.contracts
+      .slice(0, 6)
+      .map(
+        (contract, index) =>
+          `${index + 1}) ${contract.bank}, parcela ${formatMoney(contract.installment)}, ${contract.paid} pagas e ${contract.remaining} restantes, saldo ${formatMoney(contract.payoff)}`,
+      )
+      .join(" | ");
+    return `Encontrei ${analysis.contracts.length} contrato(s): ${summary}.`;
+  }
+
+  if (analysis && includesAny(normalized, ["espécie", "especie"])) {
     return `A espécie ${analysis.speciesStatus.code || "não identificada"} está classificada como ${analysis.speciesStatus.label.toLocaleLowerCase("pt-BR")}. ${analysis.speciesStatus.reason} A aceitação final ainda varia conforme o roteiro de cada banco.`;
+  }
+
+  if (analysis && asksBlocked) {
+    const blockedSummary = analysis.contracts
+      .slice(0, 4)
+      .map((contract) => {
+        const blocked = contract.blocked
+          .slice(0, 4)
+          .map((offer) => `${offer.bank}: ${offer.reason}`)
+          .join("; ");
+        return `${contract.bank} · ${formatMoney(contract.installment)} — ${blocked || "nenhum bloqueio automático"}`;
+      })
+      .join(" | ");
+    return `Principais bloqueios encontrados: ${blockedSummary}. A classificação é uma pré-análise e deve ser confirmada na condição comercial vigente.`;
+  }
+
+  if (analysis && asksRoutes) {
+    if (analysis.contracts.length === 1) {
+      const contract = analysis.contracts[0];
+      const banks = contract.possible
+        .slice(0, 8)
+        .map((item) => `${item.bank} (${item.mode})`)
+        .join(", ");
+      return contract.possible.length
+        ? `Para a parcela de ${formatMoney(contract.installment)} do ${contract.bank}, encontrei ${contract.possible.length} rota(s) possível(is): ${banks}. A ordem segue a pontuação dos roteiros cadastrados.`
+        : `Não encontrei rota automática para a parcela de ${formatMoney(contract.installment)} do ${contract.bank}. Pergunte “por que foi bloqueado?” para ver os motivos.`;
+    }
+
+    const routes = analysis.contracts
+      .slice(0, 5)
+      .map((contract) => {
+        const banks = contract.possible
+          .slice(0, 4)
+          .map((offer) => offer.bank)
+          .join(", ");
+        return `${contract.bank} · ${formatMoney(contract.installment)}: ${banks || "sem rota automática"}`;
+      })
+      .join(" | ");
+    return `Melhores rotas por contrato: ${routes}. Abra a comparação completa para conferir todos os bancos e justificativas.`;
   }
 
   if (
     analysis &&
-    (normalized.includes("onde") ||
-      normalized.includes("porta") ||
-      normalized.includes("opera"))
+    includesAny(normalized, ["margem", "disponível", "disponivel"])
   ) {
-    if (analysis.contracts.length === 1) {
-      const contract = analysis.contracts[0];
-      const banks = contract.possible.map((item) => item.bank).join(", ");
-      return `Para a parcela de ${formatMoney(contract.installment)} do ${contract.bank}, encontrei ${contract.possible.length} rotas possíveis pelo roteiro: ${banks}. Abra “Comparação completa” para ver também os bloqueios e seus motivos.`;
-    }
-
-    const withRoute = analysis.contracts.filter(
-      (contract) => contract.possible.length > 0,
-    ).length;
-    return `Analisei ${analysis.contracts.length} contratos e ${withRoute} têm pelo menos uma rota possível. Cada cartão mostra os destinos classificados e a justificativa por banco.`;
+    const { financial } = analysis;
+    return `Benefício: ${formatMoney(financial.benefitValue)} · valor consignado: ${formatMoney(financial.consignedValue)} · margem disponível: ${formatMoney(financial.availableMargin)}. Margem negativa deve seguir o tratamento específico de cada banco.`;
   }
 
-  if (analysis && normalized.includes("taxa")) {
+  if (analysis && includesAny(normalized, ["saldo", "quitação", "quitacao"])) {
+    const balances = analysis.contracts
+      .slice(0, 6)
+      .map(
+        (contract) =>
+          `${contract.bank}: saldo de quitação ${formatMoney(contract.payoff)}`,
+      )
+      .join("; ");
+    return `Saldos identificados no extrato: ${balances}. O valor definitivo deve ser confirmado pela CIP.`;
+  }
+
+  if (
+    analysis &&
+    includesAny(normalized, [
+      "parcelas pagas",
+      "parcelas restantes",
+      "quantas pagas",
+      "quantas faltam",
+      "prazo restante",
+    ])
+  ) {
+    const terms = analysis.contracts
+      .slice(0, 6)
+      .map(
+        (contract) =>
+          `${contract.bank}: ${contract.paid} pagas, ${contract.remaining} restantes de ${contract.total}`,
+      )
+      .join("; ");
+    return `Situação dos contratos: ${terms}.`;
+  }
+
+  if (analysis && includesAny(normalized, ["taxa", "juros"])) {
     const examples = analysis.contracts
       .slice(0, 3)
       .map(
@@ -433,56 +652,56 @@ function assistantReply(question: string, analysis: AnalysisResult | null) {
   }
 
   if (
-    normalized.includes("bancos") ||
-    normalized.includes("cadastrados") ||
-    normalized.includes("roteiros")
+    asksBankCatalog ||
+    includesAny(normalized, ["bancos", "cadastrados", "roteiros"])
   ) {
     return `A base INSS tem ${activeRulebookCount} bancos ativos: ${activeRulebooks.map((item) => item.bank).join(", ")}. O roteiro SIAPE da Facta está catalogado separadamente para a próxima fase.`;
   }
-  if (
-    normalized.includes("novos") ||
-    normalized.includes("adicionados") ||
-    normalized.includes("chegaram")
-  ) {
+  if (includesAny(normalized, ["novos", "adicionados", "chegaram"])) {
     return "Foram lidos 18 novos materiais: regras gerais de margem, taxa, prazo, contratos, público vulnerável, restrições geográficas, fluxo de proposta e guias de simulação. Acredto, Quero Mais Crédito e Total Cash também entraram na comparação automática.";
   }
-  if (normalized.includes("margem negativa")) {
+  if (includesAny(normalized, ["margem negativa"])) {
     return "A margem negativa deve ser abatida de uma única parcela, nunca dividida entre vários contratos. Banrisul, BRB, C6, Daycoval, Facta, Finanto, iCred, Quero Mais e Total Cash possuem tratamentos próprios; o motor aplica a regra conforme o banco e o produto.";
   }
-  if (normalized.includes("taxa teto")) {
+  if (includesAny(normalized, ["taxa teto", "teto da taxa"])) {
     return `A taxa teto informada no material é ${INSS_GENERAL_RULES.loanRateCeiling.toFixed(2).replace(".", ",")}% a.m. para empréstimo e ${INSS_GENERAL_RULES.cardRateCeiling.toFixed(2).replace(".", ",")}% a.m. para RMC/RCC.`;
   }
-  if (normalized.includes("prazo máximo") || normalized.includes("108")) {
+  if (includesAny(normalized, ["prazo máximo", "prazo maximo", "108"])) {
     return `Desde ${INSS_GENERAL_RULES.effectiveFrom}, o prazo máximo geral pode chegar a ${INSS_GENERAL_RULES.maxTerm} parcelas, sujeito à política de cada banco.`;
   }
   if (
-    normalized.includes("quantos contratos") ||
-    normalized.includes("linhas consignáveis") ||
-    normalized.includes("limite de contratos")
+    includesAny(normalized, [
+      "quantos contratos pode",
+      "linhas consignáveis",
+      "limite de contratos",
+    ])
   ) {
     return `O benefício pode ter até ${INSS_GENERAL_RULES.maxLoanContracts} contratos ativos de empréstimo e até ${INSS_GENERAL_RULES.maxCardContracts} cartões, sendo um RMC e um RCC. BPC/LOAS pode ter apenas um cartão ativo.`;
   }
-  if (normalized.includes("público vulnerável")) {
+  if (includesAny(normalized, ["público vulnerável", "publico vulneravel"])) {
     return "A vulnerabilidade pode considerar idade, renda, escolaridade, maturidade digital, capacidade civil, deficiência, doença grave e superendividamento. Alguns bancos apenas alertam; Daycoval, Digio, iCred e Quero Mais podem encaminhar para análise interna.";
   }
-  if (normalized.includes("calculadora do cidadão")) {
+  if (
+    includesAny(normalized, [
+      "calculadora do cidadão",
+      "calculadora do cidadao",
+    ])
+  ) {
     return "Abra a aba Calculadora na barra lateral. Preencha exatamente três campos e deixe o que deseja calcular em branco. Para estimar a taxa do contrato, informe parcelas restantes, valor da prestação e saldo de quitação. O resultado é aproximado; a CIP confirma o saldo real.";
   }
   if (
     normalized.includes("margem") &&
-    (normalized.includes("40") ||
-      normalized.includes("cartão") ||
-      normalized.includes("bpc"))
+    includesAny(normalized, ["40", "cartão", "cartao", "bpc"])
   ) {
     return "Após 19/05/2026, aposentados e pensionistas têm até 40% sem cartão, 35% com um cartão e 30% com RMC e RCC. BPC/LOAS tem até 35% sem cartão ou 30% com um cartão.";
   }
-  if (normalized.includes("taxa")) {
+  if (includesAny(normalized, ["taxa", "juros"])) {
     return "A taxa é recalculada com parcela, saldo de quitação e parcelas restantes. A taxa aproximada impressa no extrato fica apenas como referência.";
   }
 
   return analysis
-    ? "A análise já está pronta. Pergunte onde cada contrato pode ser portado, por que um banco bloqueou ou como a taxa foi calculada."
-    : `Posso explicar as regras dos ${activeRulebookCount} bancos INSS cadastrados. Para analisar um cliente automaticamente, anexe o extrato em PDF.`;
+    ? "Não identifiquei exatamente o que você quer consultar. Tente perguntar: “quais são as melhores opções?”, “por que foi bloqueado?”, “qual é a margem?”, “quantas parcelas faltam?” ou mencione o nome de um banco."
+    : `Não encontrei essa informação na pergunta. Posso explicar as regras dos ${activeRulebookCount} bancos INSS cadastrados, taxa teto, prazo, margem e refinanciamento. Para analisar um cliente, anexe o extrato em PDF.`;
 }
 
 function StatusPill({
@@ -792,7 +1011,7 @@ export default function Home() {
         {
           id: id + 1,
           role: "assistant",
-          text: assistantReply(cleanQuestion, analysis),
+          text: assistantReply(cleanQuestion, analysis, messages),
         },
       ]);
       setIsReplying(false);

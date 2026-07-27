@@ -84,7 +84,7 @@ button {
 
 .sidebar-profile span {
   color: #aeb8cc;
-  font-size: 11px;
+  font-size: 14px;
   margin-top: 1px;
 }
 
@@ -98,7 +98,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 9px;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   transition: 160ms ease;
 }
@@ -109,7 +109,7 @@ button {
 }
 
 .new-case span {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 400;
 }
 
@@ -130,7 +130,7 @@ button {
   grid-template-columns: 24px 1fr auto;
   align-items: center;
   text-align: left;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 650;
 }
 
@@ -141,7 +141,7 @@ button {
 }
 
 .nav-icon {
-  font-size: 18px;
+  font-size: 22px;
   color: #8fa2c7;
 }
 
@@ -157,7 +157,7 @@ button {
   place-items: center;
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.08);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .sidebar-section {
@@ -167,7 +167,7 @@ button {
 .sidebar-section > p {
   color: #73819b;
   margin: 0 10px 9px;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   font-weight: 800;
 }
@@ -207,13 +207,13 @@ button {
 .recent span:last-child {
   display: flex;
   flex-direction: column;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.35;
 }
 
 .recent small {
   color: #74829b;
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 2px;
 }
 
@@ -223,7 +223,7 @@ button {
   border: 1px dashed rgba(255, 255, 255, 0.1);
   border-radius: 9px;
   color: #69768e;
-  font-size: 10px;
+  font-size: 12px;
   text-align: center;
 }
 
@@ -246,19 +246,19 @@ button {
   border-radius: 10px;
   background: #dfd9cc;
   color: #283146;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
 }
 
 .sidebar-profile strong {
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .sidebar-profile button {
   border: 0;
   color: #74819a;
   background: transparent;
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .workspace {
@@ -287,7 +287,7 @@ button {
   align-items: center;
   gap: 7px;
   color: #6d7586;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -304,7 +304,7 @@ button {
 .workspace-header h1 {
   margin: 5px 0 0;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 27px;
+  font-size: 33px;
   line-height: 1;
   letter-spacing: -0.025em;
 }
@@ -341,7 +341,7 @@ button {
   height: 37px;
   padding: 0 15px;
   border-radius: 9px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
 }
 
@@ -368,7 +368,7 @@ button {
   background: #fff7df;
   border-bottom: 1px solid #eee1b9;
   color: #725c25;
-  font-size: 10px;
+  font-size: 12px;
   text-align: center;
 }
 
@@ -379,7 +379,7 @@ button {
   border-radius: 4px;
   background: #f2de9c;
   color: #604c1c;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -414,7 +414,7 @@ button {
   background: var(--blue);
   color: #fff;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 19px;
+  font-size: 23px;
   font-weight: 700;
   box-shadow: 0 5px 13px rgba(49, 84, 232, 0.18);
   overflow: hidden;
@@ -445,18 +445,18 @@ button {
 }
 
 .message-meta strong {
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .message-meta span {
   color: #9a9fac;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .message-body > p {
   margin: 3px 0 0;
   color: #485064;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1.65;
 }
 
@@ -467,7 +467,7 @@ button {
 .privacy-note {
   margin-top: 10px;
   color: #6b7280;
-  font-size: 10px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -519,7 +519,7 @@ button {
   color: var(--blue);
   display: grid;
   place-items: center;
-  font-size: 19px;
+  font-size: 23px;
   font-weight: 800;
 }
 
@@ -537,20 +537,20 @@ button {
 .upload-card strong {
   overflow: hidden;
   color: #343c4f;
-  font-size: 11px;
+  font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .upload-card small {
   color: #8a909d;
-  font-size: 9px;
+  font-size: 12px;
   margin-top: 3px;
 }
 
 .upload-action {
   color: var(--blue);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -576,20 +576,20 @@ button {
   display: grid;
   place-items: center;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 28px;
+  font-size: 34px;
 }
 
 .empty-analysis h2 {
   margin: 6px 0 7px;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 22px;
+  font-size: 27px;
 }
 
 .empty-analysis > p {
   max-width: 470px;
   margin: 0 auto;
   color: #717887;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -623,18 +623,18 @@ button {
   color: var(--blue);
   display: grid;
   place-items: center;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 900;
 }
 
 .empty-steps strong {
   color: #3f4657;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .empty-steps small {
   color: #969ba7;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .automatic-analysis {
@@ -663,20 +663,20 @@ button {
   color: var(--green);
   display: grid;
   place-items: center;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 900;
 }
 
 .analysis-complete h2 {
   margin: 3px 0 2px;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 18px;
+  font-size: 22px;
 }
 
 .analysis-complete p {
   margin: 0;
   color: #738078;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .local-processing {
@@ -685,7 +685,7 @@ button {
   border-radius: 999px;
   color: #51806c;
   background: rgba(255, 255, 255, 0.72);
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -720,14 +720,14 @@ button {
 
 .client-analysis-card span {
   color: #9a9faa;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .client-analysis-card strong {
   margin-top: 3px;
   overflow: hidden;
   color: #3f4656;
-  font-size: 10px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -735,7 +735,7 @@ button {
 .client-analysis-card small {
   margin-top: 3px;
   color: #858b98;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .client-analysis-card .positive-value {
@@ -750,7 +750,7 @@ button {
   align-self: flex-start;
   margin-top: 5px;
   color: inherit;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .species-alert {
@@ -763,7 +763,7 @@ button {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .species-alert strong {
@@ -813,7 +813,7 @@ button {
   color: var(--blue);
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -823,7 +823,7 @@ button {
 
 .contract-number small {
   color: #9ba0aa;
-  font-size: 7px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.08em;
 }
@@ -831,13 +831,13 @@ button {
 .contract-number h3 {
   margin: 2px 0 0;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 16px;
+  font-size: 20px;
 }
 
 .contract-number p {
   margin: 2px 0 0;
   color: #9297a2;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .contract-metrics {
@@ -862,7 +862,7 @@ button {
 
 .contract-metrics span {
   color: #9b9faa;
-  font-size: 7px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -870,13 +870,13 @@ button {
 .contract-metrics strong {
   margin-top: 3px;
   color: #404758;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .contract-metrics small {
   margin-top: 2px;
   color: #8e94a0;
-  font-size: 7px;
+  font-size: 12px;
 }
 
 .best-routes {
@@ -902,12 +902,12 @@ button {
 .best-routes-heading h4 {
   margin: 3px 0 0;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 15px;
+  font-size: 18px;
 }
 
 .best-routes-heading > span {
   color: var(--green);
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -927,7 +927,7 @@ button {
   border-radius: 999px;
   background: var(--green);
   color: #fff;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.06em;
 }
@@ -935,7 +935,7 @@ button {
 .first-choice-heading h4 {
   margin-top: 7px;
   color: #145f47;
-  font-size: 23px;
+  font-size: 28px;
   line-height: 1;
 }
 
@@ -943,7 +943,7 @@ button {
   display: block;
   margin-top: 5px;
   color: #26775c;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .best-routes-heading > .simulate-first {
@@ -952,7 +952,7 @@ button {
   background: #fff;
   box-shadow: 0 4px 14px rgba(20, 122, 88, 0.12);
   color: #126b4e;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .first-choice-reason {
@@ -964,7 +964,7 @@ button {
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -1006,7 +1006,7 @@ button {
   color: var(--green);
   display: grid;
   place-items: center;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -1017,13 +1017,13 @@ button {
 
 .route-reasons strong {
   color: #486256;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .route-reasons small {
   margin-top: 2px;
   color: #758079;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -1041,7 +1041,7 @@ button {
   justify-content: space-between;
   gap: 12px;
   color: #5f6777;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -1052,7 +1052,7 @@ button {
 .bank-comparison summary::after {
   content: "⌄";
   color: #9298a4;
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .bank-comparison[open] summary::after {
@@ -1062,7 +1062,7 @@ button {
 .bank-comparison summary small {
   margin-left: auto;
   color: #959aa5;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -1091,13 +1091,13 @@ button {
 
 .comparison-row strong {
   color: #454c5d;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .comparison-row small {
   margin-top: 2px;
   color: #9298a4;
-  font-size: 7px;
+  font-size: 12px;
 }
 
 .comparison-status {
@@ -1117,7 +1117,7 @@ button {
 
 .comparison-reason {
   color: #747b89;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -1127,7 +1127,7 @@ button {
   gap: 12px;
   margin: 8px 0 25px;
   color: #a1a5ae;
-  font-size: 9px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -1167,13 +1167,13 @@ button {
   color: #777e8d;
   display: flex;
   flex-direction: column;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .analysis-summary strong {
   color: var(--ink);
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 20px;
+  font-size: 24px;
   line-height: 1.1;
 }
 
@@ -1183,7 +1183,7 @@ button {
   border-radius: 8px;
   display: grid;
   place-items: center;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 900;
 }
 
@@ -1227,7 +1227,7 @@ button {
 
 .mini-label {
   color: #60917e;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.11em;
 }
@@ -1235,7 +1235,7 @@ button {
 .result-card h2 {
   margin: 2px 0 0;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 17px;
+  font-size: 21px;
   letter-spacing: -0.015em;
 }
 
@@ -1247,7 +1247,7 @@ button {
   min-height: 20px;
   padding: 3px 7px;
   border-radius: 999px;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 850;
   white-space: nowrap;
 }
@@ -1285,7 +1285,7 @@ button {
   align-items: center;
   gap: 7px;
   color: #53675f;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .rule-checks li span {
@@ -1309,12 +1309,12 @@ button {
 .block-heading h3 {
   margin: 0;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 15px;
+  font-size: 18px;
 }
 
 .block-heading span {
   color: #9196a1;
-  font-size: 8px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -1335,7 +1335,7 @@ button {
   align-items: center;
   border-top: 1px solid #eff0f2;
   color: #51596a;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .contract-row:first-child {
@@ -1350,7 +1350,7 @@ button {
   min-height: 29px;
   color: #9499a4;
   background: #f8f8f7;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1363,12 +1363,12 @@ button {
 
 .bank-cell b {
   color: #31394b;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .bank-cell small {
   color: #a0a4ad;
-  font-size: 8px;
+  font-size: 12px;
   margin-top: 2px;
 }
 
@@ -1381,7 +1381,7 @@ button {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -1394,7 +1394,7 @@ button {
   color: #63708e;
   display: grid;
   place-items: center;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -1461,7 +1461,7 @@ button {
   align-items: center;
   justify-content: space-between;
   color: #5a6272;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -1469,7 +1469,7 @@ button {
   border: 0;
   background: transparent;
   color: #999ea8;
-  font-size: 18px;
+  font-size: 22px;
 }
 
 .client-card {
@@ -1496,7 +1496,7 @@ button {
   color: #52617f;
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -1509,14 +1509,14 @@ button {
 .client-top strong {
   overflow: hidden;
   color: #343b4d;
-  font-size: 10px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .client-top span:not(.status-pill) {
   color: #8e94a0;
-  font-size: 8px;
+  font-size: 12px;
   margin-top: 2px;
 }
 
@@ -1534,13 +1534,13 @@ button {
 
 .client-card dt {
   color: #9ba0aa;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .client-card dd {
   margin: 3px 0 0;
   color: #4b5262;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -1568,7 +1568,7 @@ button {
   color: var(--blue);
   display: grid;
   place-items: center;
-  font-size: 17px;
+  font-size: 21px;
 }
 
 .context-empty-card > div {
@@ -1578,13 +1578,13 @@ button {
 
 .context-empty-card strong {
   color: #495163;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .context-empty-card small {
   margin-top: 3px;
   color: #9298a4;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -1595,7 +1595,7 @@ button {
 
 .context-title {
   color: #656d7c;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -1603,7 +1603,7 @@ button {
   border: 0;
   background: transparent;
   color: var(--blue);
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -1635,7 +1635,7 @@ button {
   display: grid;
   place-items: center;
   color: #fff;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -1711,18 +1711,18 @@ button {
 
 .bank-list strong {
   color: #404758;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .bank-list small {
   color: #9a9fab;
-  font-size: 7px;
+  font-size: 12px;
   margin-top: 1px;
 }
 
 .checkmark {
   color: var(--green);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 900;
 }
 
@@ -1737,12 +1737,12 @@ button {
   align-items: center;
   justify-content: space-between;
   color: #818794;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .extraction-list b {
   color: #4e5666;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .composer-wrap {
@@ -1775,7 +1775,7 @@ button {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.9);
   color: #6a7282;
-  font-size: 8px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -1800,7 +1800,7 @@ button {
   border-radius: 9px;
   background: #f2f3f6;
   color: #697183;
-  font-size: 18px;
+  font-size: 22px;
 }
 
 .composer input {
@@ -1810,7 +1810,7 @@ button {
   outline: 0;
   color: #333b4d;
   background: transparent;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .composer input::placeholder {
@@ -1823,7 +1823,7 @@ button {
   border-radius: 5px;
   color: #65708b;
   background: #eef0f6;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 850;
 }
 
@@ -1834,7 +1834,7 @@ button {
   border-radius: 9px;
   background: var(--blue);
   color: #fff;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 800;
 }
 
@@ -1846,7 +1846,7 @@ button {
 .composer-wrap > p {
   margin: 6px 0 0;
   color: #9ca1aa;
-  font-size: 7px;
+  font-size: 12px;
   text-align: center;
 }
 
@@ -1863,7 +1863,7 @@ button {
 .calculator-header p {
   margin: 7px 0 0;
   color: #7d8492;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .official-calculator-link {
@@ -1902,7 +1902,7 @@ button {
   display: grid;
   place-items: center;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 22px;
+  font-size: 27px;
   font-weight: 800;
 }
 
@@ -1910,14 +1910,14 @@ button {
   margin: 4px 0 0;
   color: #30394c;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 21px;
+  font-size: 26px;
 }
 
 .calculator-intro p {
   max-width: 730px;
   margin: 5px 0 0;
   color: #737b8c;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -1952,7 +1952,7 @@ button {
   margin: 4px 0 0;
   color: #30394c;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 19px;
+  font-size: 23px;
 }
 
 .example-button {
@@ -1962,7 +1962,7 @@ button {
   border-radius: 8px;
   background: #f7f8ff;
   color: var(--blue);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -2005,19 +2005,19 @@ button {
 
 .calculator-field strong {
   color: #424a5c;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .calculator-field b {
   color: var(--green);
-  font-size: 7px;
+  font-size: 12px;
   letter-spacing: 0.06em;
 }
 
 .calculator-field > small {
   margin-top: 3px;
   color: #9499a4;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .calculator-input {
@@ -2040,7 +2040,7 @@ button {
   outline: 0;
   color: #2f3748;
   background: transparent;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 750;
 }
 
@@ -2058,7 +2058,7 @@ button {
   color: #747c8b;
   display: grid;
   place-items: center;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -2073,7 +2073,7 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -2098,7 +2098,7 @@ button {
   height: 37px;
   padding: 0 16px;
   border-radius: 9px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 850;
 }
 
@@ -2147,7 +2147,7 @@ button {
   border-radius: 9px;
   display: grid;
   place-items: center;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
 }
 
@@ -2164,14 +2164,14 @@ button {
 .calculator-result p {
   margin: 9px 0 0;
   color: #7b8290;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .calculator-result strong {
   margin-top: 4px;
   color: #30394c;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 20px;
+  font-size: 24px;
 }
 
 .calculator-result.ready strong {
@@ -2182,7 +2182,7 @@ button {
   max-width: 230px;
   margin-top: 5px;
   color: #959aa5;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -2195,14 +2195,14 @@ button {
 
 .calculator-reference strong {
   color: #4b5363;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .calculator-reference ul {
   margin: 8px 0 0;
   padding-left: 16px;
   color: #727a89;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.75;
 }
 
@@ -2226,13 +2226,13 @@ button {
   background: #f7e9bc;
   display: grid;
   place-items: center;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 900;
 }
 
 .calculator-warning p {
   margin: 0;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -2241,7 +2241,7 @@ button {
   border: 0;
   background: transparent;
   color: var(--blue);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -2253,7 +2253,7 @@ button {
 .rules-header > div > p {
   margin: 7px 0 0;
   color: #7d8492;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .rules-content {
@@ -2287,7 +2287,7 @@ button {
 .rules-overview > div > span {
   color: var(--blue);
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 30px;
+  font-size: 36px;
 }
 
 .rules-overview p {
@@ -2295,13 +2295,13 @@ button {
   color: #8a909c;
   display: flex;
   flex-direction: column;
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
 .rules-overview strong {
   color: #3b4354;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .rules-toolbar {
@@ -2323,7 +2323,7 @@ button {
   border-radius: 8px;
   color: #7c8392;
   background: transparent;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .rules-toolbar button.active {
@@ -2335,7 +2335,7 @@ button {
 
 .rules-toolbar > span {
   color: #989da7;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .rulebook-grid {
@@ -2369,20 +2369,20 @@ button {
   color: #fff;
   display: grid;
   place-items: center;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 900;
 }
 
 .rulebook-top h2 {
   margin: 0;
   font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 18px;
+  font-size: 22px;
 }
 
 .rulebook-top p {
   margin: 2px 0 0;
   color: #9297a2;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .rulebook-meta {
@@ -2411,19 +2411,19 @@ button {
 
 .rulebook-meta span {
   color: #a0a5af;
-  font-size: 7px;
+  font-size: 12px;
 }
 
 .rulebook-meta strong {
   color: #4b5262;
-  font-size: 9px;
+  font-size: 12px;
   margin-top: 3px;
 }
 
 .rulebook-description {
   margin: 0;
   color: #777e8d;
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.6;
 }
 
@@ -2433,7 +2433,7 @@ button {
   border-radius: 8px;
   color: #687183;
   background: #f5f6f8;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.8;
 }
 
@@ -2451,7 +2451,7 @@ button {
   border-radius: 8px;
   background: #fff;
   color: #626a7a;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -2481,7 +2481,7 @@ button {
   color: var(--green);
   display: grid;
   place-items: center;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -2492,13 +2492,13 @@ button {
 
 .governance-note strong {
   color: #40544b;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .governance-note p {
   margin: 3px 0 0;
   color: #73827a;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -2506,8 +2506,111 @@ button {
   border: 0;
   background: transparent;
   color: var(--green);
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 850;
+}
+
+/* Legibilidade e orientação para uso operacional */
+.app-shell {
+  grid-template-columns: 278px minmax(0, 1fr);
+}
+
+.sidebar {
+  padding-inline: 20px;
+}
+
+.new-case,
+.main-nav button,
+.soft-button,
+.primary-button {
+  min-height: 44px;
+}
+
+.main-nav button {
+  height: 48px;
+}
+
+.chat-layout {
+  grid-template-columns: minmax(0, 1fr) 330px;
+}
+
+.conversation {
+  max-width: 940px;
+}
+
+.message-body p {
+  line-height: 1.7;
+}
+
+.context-panel {
+  width: 330px;
+}
+
+.composer-wrap {
+  left: 278px;
+  right: 330px;
+}
+
+.composer {
+  height: 58px;
+  border-width: 2px;
+}
+
+.composer input::placeholder {
+  color: #747d8d;
+  opacity: 1;
+}
+
+.shortcut-row button {
+  min-height: 36px;
+  padding: 7px 12px;
+}
+
+.empty-analysis {
+  border-width: 2px;
+}
+
+.empty-upload-button {
+  min-height: 48px;
+  margin: 18px auto 4px;
+  padding: 0 24px;
+  border: 1px solid var(--blue);
+  border-radius: 11px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 850;
+  box-shadow: 0 7px 18px rgba(49, 84, 232, 0.2);
+}
+
+.empty-upload-button:hover {
+  background: var(--blue-dark);
+  transform: translateY(-1px);
+}
+
+.empty-steps > div {
+  min-height: 96px;
+  padding: 15px 12px;
+}
+
+.comparison-row {
+  min-height: 62px;
+  padding-block: 10px;
+}
+
+.rulebook-card,
+.contract-card,
+.client-card,
+.calculator-card {
+  border-width: 2px;
+}
+
+button:focus-visible,
+input:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgba(49, 84, 232, 0.42);
+  outline-offset: 2px;
 }
 
 @media (max-width: 1120px) {
@@ -2562,7 +2665,7 @@ button {
   }
 
   .new-case span {
-    font-size: 21px;
+    font-size: 26px;
   }
 
   .main-nav button {
@@ -2573,7 +2676,7 @@ button {
   }
 
   .nav-icon {
-    font-size: 19px;
+    font-size: 23px;
   }
 
   .nav-count,
@@ -2595,7 +2698,7 @@ button {
   }
 
   .workspace-header h1 {
-    font-size: 22px;
+    font-size: 27px;
   }
 
   .soft-button {

@@ -1207,7 +1207,7 @@ export default function Home() {
                 className="primary-button"
                 onClick={() => uploadRef.current?.click()}
               >
-                Anexar extrato
+                Selecionar extrato PDF
               </button>
             </div>
           </header>
@@ -1581,9 +1581,15 @@ export default function Home() {
                   <span className="mini-label">PRONTO PARA ANALISAR</span>
                   <h2>O atendimento começa com um extrato</h2>
                   <p>
-                    Selecione o PDF e aguarde: a tela será preenchida
-                    automaticamente, sem precisar perguntar ao chat.
+                    Clique no botão abaixo e escolha o extrato do cliente. O
+                    sistema fará a leitura e mostrará as opções automaticamente.
                   </p>
+                  <button
+                    className="empty-upload-button"
+                    onClick={() => uploadRef.current?.click()}
+                  >
+                    Selecionar extrato PDF
+                  </button>
                   <div className="empty-steps">
                     <div>
                       <span>1</span>
@@ -1826,8 +1832,8 @@ export default function Home() {
                 onChange={(event) => setQuestion(event.target.value)}
                 placeholder={
                   analysis
-                    ? "Pergunte sobre esta análise…"
-                    : "Pergunte sobre as regras INSS…"
+                    ? "Ex.: quais bancos aceitam este contrato?"
+                    : "Ex.: qual é a taxa teto do INSS?"
                 }
               />
               <span className="scope-label">INSS</span>

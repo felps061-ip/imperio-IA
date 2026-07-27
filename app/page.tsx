@@ -16,6 +16,10 @@ import {
 } from "@/lib/citizen-calculator.mjs";
 
 type View = "chat" | "rules" | "calculator";
+
+const BEVI_HELP_URL =
+  "https://grupoimperio.multsistema.com.br/app/menu/redirect/bevi/help";
+
 type ChatMessage = {
   id: number;
   role: "user" | "assistant";
@@ -726,8 +730,8 @@ function assistantReply(
   }
 
   return analysis
-    ? "Não identifiquei exatamente o que você quer consultar. Tente perguntar: “quais são as melhores opções?”, “por que foi bloqueado?”, “qual é a margem?”, “quantas parcelas faltam?” ou mencione o nome de um banco."
-    : `Não encontrei essa informação na pergunta. Posso explicar as regras dos ${activeRulebookCount} bancos INSS cadastrados, taxa teto, prazo, margem e refinanciamento. Para analisar um cliente, anexe o extrato em PDF.`;
+    ? "Não identifiquei exatamente o que você quer consultar. Tente perguntar: “quais são as melhores opções?”, “por que foi bloqueado?”, “qual é a margem?” ou mencione o nome de um banco. Para uma regra específica ou atualizada, use o botão “Pesquisar na IA BeviAjuda” abaixo."
+    : `Não encontrei essa informação na base local. Posso explicar as regras dos ${activeRulebookCount} bancos INSS cadastrados, taxa teto, prazo, margem e refinanciamento. Para regras específicas ou atualizadas, use o botão “Pesquisar na IA BeviAjuda” abaixo.`;
 }
 
 function StatusPill({
@@ -1725,6 +1729,20 @@ export default function Home() {
               )}
 
               <div className="context-section">
+                <div className="official-help-card">
+                  <span>Fonte oficial BEVI</span>
+                  <strong>Dúvida muito específica?</strong>
+                  <small>
+                    Consulte regras e procedimentos atualizados diretamente na
+                    IA BeviAjuda.
+                  </small>
+                  <a href={BEVI_HELP_URL} target="_blank" rel="noreferrer">
+                    Abrir IA BeviAjuda ↗
+                  </a>
+                </div>
+              </div>
+
+              <div className="context-section">
                 <div className="context-title">
                   <span>Roteiros consultados</span>
                   <button onClick={() => setView("rules")}>Gerenciar</button>
@@ -1779,6 +1797,15 @@ export default function Home() {
 
           <footer className="composer-wrap">
             <div className="prompt-chips">
+              <a
+                className="bevi-help-chip"
+                href={BEVI_HELP_URL}
+                target="_blank"
+                rel="noreferrer"
+                title="Abre a pesquisa oficial da BEVI em uma nova guia"
+              >
+                Pesquisar na IA BeviAjuda ↗
+              </a>
               <button
                 onClick={() =>
                   askShortcut(

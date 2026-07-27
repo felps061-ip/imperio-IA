@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 
 import {
@@ -326,7 +327,6 @@ function refinancingGuide(bank: string) {
 }
 
 async function extractPdfText(file: File) {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
   const data = new Uint8Array(await file.arrayBuffer());
@@ -353,6 +353,36 @@ async function extractPdfText(file: File) {
   }
 
   return pageTexts.join("\n");
+}
+
+function friendlyPdfError(error: unknown) {
+  const technicalMessage =
+    error instanceof Error ? error.message.toLocaleLowerCase("pt-BR") : "";
+
+  if (
+    technicalMessage.includes("failed to fetch") ||
+    technicalMessage.includes("dynamically imported module") ||
+    technicalMessage.includes("loading chunk")
+  ) {
+    return "O leitor de PDF não carregou corretamente. Atualize a página e tente anexar o arquivo novamente.";
+  }
+
+  if (
+    technicalMessage.includes("password") ||
+    technicalMessage.includes("encrypted")
+  ) {
+    return "Este PDF está protegido por senha. Baixe um extrato sem senha e tente novamente.";
+  }
+
+  if (
+    technicalMessage.includes("invalid pdf") ||
+    technicalMessage.includes("missing pdf") ||
+    technicalMessage.includes("unexpected response")
+  ) {
+    return "O arquivo não parece ser um PDF válido ou está danificado. Baixe novamente o extrato no Meu INSS.";
+  }
+
+  return "Não consegui ler este extrato. Baixe o PDF novamente no Meu INSS e tente anexá-lo outra vez.";
 }
 
 function normalizeChatText(text: string) {
@@ -1092,11 +1122,7 @@ export default function Home() {
     } catch (error) {
       setAnalysis(null);
       setUploadState("error");
-      setUploadMessage(
-        error instanceof Error
-          ? error.message
-          : "Não consegui ler este PDF. Tente gerar um novo extrato INSS.",
-      );
+      setUploadMessage(friendlyPdfError(error));
     }
   }
 

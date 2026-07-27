@@ -528,7 +528,7 @@ button {
   color: var(--green);
 }
 
-.upload-card > span:nth-child(3) {
+.upload-card > span:nth-child(2) {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -545,7 +545,19 @@ button {
 .upload-card small {
   color: #8a909d;
   font-size: 12px;
+  line-height: 1.45;
   margin-top: 3px;
+}
+
+.upload-card.error small {
+  color: #a63d3d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.upload-card.error .upload-icon {
+  background: #fde9e9;
+  color: #b23d3d;
 }
 
 .upload-action {

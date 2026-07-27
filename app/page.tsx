@@ -9,8 +9,13 @@ import {
   INSS_GENERAL_RULES,
   maskDocument,
 } from "@/lib/inss-extrato.mjs";
+import {
+  calculateCitizenFinancing,
+  formatCitizenResult,
+  parseCitizenNumber,
+} from "@/lib/citizen-calculator.mjs";
 
-type View = "chat" | "rules";
+type View = "chat" | "rules" | "calculator";
 type ChatMessage = {
   id: number;
   role: "user" | "assistant";
@@ -461,7 +466,7 @@ function assistantReply(question: string, analysis: AnalysisResult | null) {
     return "A vulnerabilidade pode considerar idade, renda, escolaridade, maturidade digital, capacidade civil, deficiência, doença grave e superendividamento. Alguns bancos apenas alertam; Daycoval, Digio, iCred e Quero Mais podem encaminhar para análise interna.";
   }
   if (normalized.includes("calculadora do cidadão")) {
-    return "Na Calculadora do Cidadão, informe parcelas restantes, taxa mensal e valor da parcela. O valor financiado retornado funciona como saldo devedor aproximado; use apenas como referência, porque a CIP confirma o saldo real.";
+    return "Abra a aba Calculadora na barra lateral. Preencha exatamente três campos e deixe o que deseja calcular em branco. Para estimar a taxa do contrato, informe parcelas restantes, valor da prestação e saldo de quitação. O resultado é aproximado; a CIP confirma o saldo real.";
   }
   if (
     normalized.includes("margem") &&
@@ -488,6 +493,264 @@ function StatusPill({
   children: React.ReactNode;
 }) {
   return <span className={`status-pill ${kind}`}>{children}</span>;
+}
+
+const calculatorFields = {
+  months: {
+    label: "Nº de meses",
+    hint: "Prazo ou parcelas restantes",
+    placeholder: "Ex.: 84",
+    suffix: "meses",
+  },
+  monthlyRate: {
+    label: "Taxa de juros mensal",
+    hint: "Taxa em percentual ao mês",
+    placeholder: "Ex.: 1,85",
+    suffix: "% a.m.",
+  },
+  installment: {
+    label: "Valor da prestação",
+    hint: "Primeira prestação fora do ato",
+    placeholder: "Ex.: 480,00",
+    suffix: "R$",
+  },
+  financed: {
+    label: "Valor financiado",
+    hint: "Não inclui o valor da entrada",
+    placeholder: "Ex.: 25.000,00",
+    suffix: "R$",
+  },
+} as const;
+
+type CalculatorField = keyof typeof calculatorFields;
+
+function CalculatorView({ onBack }: { onBack: () => void }) {
+  const emptyValues: Record<CalculatorField, string> = {
+    months: "",
+    monthlyRate: "",
+    installment: "",
+    financed: "",
+  };
+  const [values, setValues] = useState(emptyValues);
+  const [result, setResult] = useState<{
+    field: CalculatorField;
+    value: number;
+  } | null>(null);
+  const [error, setError] = useState("");
+
+  function resetCalculator() {
+    setValues(emptyValues);
+    setResult(null);
+    setError("");
+  }
+
+  function submitCalculation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setResult(null);
+
+    try {
+      const calculation = calculateCitizenFinancing({
+        months: parseCitizenNumber(values.months),
+        monthlyRate: parseCitizenNumber(values.monthlyRate),
+        installment: parseCitizenNumber(values.installment),
+        financed: parseCitizenNumber(values.financed),
+      }) as { field: CalculatorField; value: number };
+
+      const maximumFractionDigits =
+        calculation.field === "monthlyRate"
+          ? 6
+          : calculation.field === "months"
+            ? 2
+            : 2;
+      const calculatedInput = calculation.value.toLocaleString("pt-BR", {
+        minimumFractionDigits:
+          calculation.field === "months" ? 2 : maximumFractionDigits,
+        maximumFractionDigits,
+      });
+
+      setValues((current) => ({
+        ...current,
+        [calculation.field]: calculatedInput,
+      }));
+      setResult(calculation);
+    } catch (calculationError) {
+      setError(
+        calculationError instanceof Error
+          ? calculationError.message
+          : "Não foi possível realizar o cálculo. Revise os dados.",
+      );
+    }
+  }
+
+  return (
+    <section className="workspace calculator-workspace">
+      <header className="workspace-header calculator-header">
+        <div>
+          <div className="eyebrow">
+            <span className="live-dot" />
+            Ferramenta de apoio
+          </div>
+          <h1>Calculadora do Cidadão</h1>
+          <p>Financiamento com prestações fixas e juros compostos mensais.</p>
+        </div>
+        <a
+          className="soft-button official-calculator-link"
+          href="https://www3.bcb.gov.br/CALCIDADAO/publico/exibirFormFinanciamentoPrestacoesFixas.do?method=exibirFormFinanciamentoPrestacoesFixas"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Abrir versão oficial ↗
+        </a>
+      </header>
+
+      <div className="calculator-content">
+        <div className="calculator-intro">
+          <span className="calculator-intro-icon">%</span>
+          <div>
+            <span className="mini-label">COMO UTILIZAR</span>
+            <h2>Preencha três campos e deixe um em branco</h2>
+            <p>
+              O campo vazio será calculado automaticamente. Para estimar a taxa
+              de um contrato INSS, informe as parcelas restantes, a prestação e
+              o saldo de quitação.
+            </p>
+          </div>
+        </div>
+
+        <div className="calculator-layout">
+          <form className="citizen-calculator" onSubmit={submitCalculation}>
+            <div className="calculator-form-heading">
+              <div>
+                <span className="mini-label">SIMULAÇÃO</span>
+                <h2>Financiamento com prestações fixas</h2>
+              </div>
+              <button
+                type="button"
+                className="example-button"
+                onClick={() => {
+                  setValues({
+                    months: "10",
+                    monthlyRate: "",
+                    installment: "86,00",
+                    financed: "750,00",
+                  });
+                  setResult(null);
+                  setError("");
+                }}
+              >
+                Usar exemplo
+              </button>
+            </div>
+
+            <div className="calculator-fields">
+              {(Object.keys(calculatorFields) as CalculatorField[]).map(
+                (field) => {
+                  const metadata = calculatorFields[field];
+                  const isCalculated = result?.field === field;
+
+                  return (
+                    <label
+                      className={`calculator-field ${isCalculated ? "calculated" : ""}`}
+                      key={field}
+                    >
+                      <span>
+                        <strong>{metadata.label}</strong>
+                        {isCalculated && <b>CALCULADO</b>}
+                      </span>
+                      <small>{metadata.hint}</small>
+                      <span className="calculator-input">
+                        <input
+                          inputMode="decimal"
+                          value={values[field]}
+                          onChange={(event) => {
+                            setValues((current) => ({
+                              ...current,
+                              [field]: event.target.value,
+                            }));
+                            setResult(null);
+                            setError("");
+                          }}
+                          placeholder={metadata.placeholder}
+                          aria-label={metadata.label}
+                        />
+                        <span>{metadata.suffix}</span>
+                      </span>
+                    </label>
+                  );
+                },
+              )}
+            </div>
+
+            {error && (
+              <div className="calculator-error" role="alert">
+                <span>!</span>
+                {error}
+              </div>
+            )}
+
+            <div className="calculator-actions">
+              <button
+                type="button"
+                className="calculator-clear"
+                onClick={resetCalculator}
+              >
+                Limpar
+              </button>
+              <button className="calculator-submit">Calcular agora</button>
+            </div>
+          </form>
+
+          <aside className="calculator-result-panel">
+            <span className="mini-label">RESULTADO</span>
+            {result ? (
+              <div className="calculator-result ready">
+                <span className="result-check">✓</span>
+                <p>{calculatorFields[result.field].label}</p>
+                <strong>
+                  {formatCitizenResult(result.field, result.value)}
+                </strong>
+                <small>
+                  O valor foi preenchido automaticamente no campo destacado.
+                </small>
+              </div>
+            ) : (
+              <div className="calculator-result">
+                <span className="result-placeholder">=</span>
+                <p>Aguardando cálculo</p>
+                <strong>—</strong>
+                <small>
+                  Deixe apenas o campo desejado em branco e clique em calcular.
+                </small>
+              </div>
+            )}
+
+            <div className="calculator-reference">
+              <strong>Uso no extrato INSS</strong>
+              <ul>
+                <li>Meses: utilize as parcelas restantes.</li>
+                <li>Prestação: utilize o valor da parcela.</li>
+                <li>Financiado: utilize a quitação ou saldo devedor.</li>
+                <li>Deixe a taxa vazia para recalculá-la.</li>
+              </ul>
+            </div>
+
+            <div className="calculator-warning">
+              <span>i</span>
+              <p>
+                Resultado aproximado para apoio operacional. O saldo oficial da
+                portabilidade deve ser confirmado pela CIP.
+              </p>
+            </div>
+          </aside>
+        </div>
+
+        <button className="calculator-back" onClick={onBack}>
+          ← Voltar ao atendimento
+        </button>
+      </div>
+    </section>
+  );
 }
 
 export default function Home() {
@@ -636,6 +899,14 @@ export default function Home() {
             <span className="nav-icon">≡</span>
             Roteiros
             <span className="nav-count">{rulebooks.length}</span>
+          </button>
+          <button
+            className={view === "calculator" ? "active" : ""}
+            onClick={() => setView("calculator")}
+          >
+            <span className="nav-icon">%</span>
+            Calculadora
+            <span className="nav-count">BC</span>
           </button>
         </nav>
 
@@ -939,39 +1210,61 @@ export default function Home() {
                         </div>
 
                         <div className="best-routes">
-                          <div className="best-routes-heading">
-                            <div>
-                              <span className="mini-label">
-                                DESTINOS POSSÍVEIS PELO ROTEIRO
-                              </span>
-                              <h4>
-                                {contract.possible.length
-                                  ? contract.possible
-                                      .map((item) => item.bank)
-                                      .join(" · ")
-                                  : "Nenhuma rota automática encontrada"}
-                              </h4>
-                            </div>
-                            <span>
-                              {contract.possible.length
-                                ? "seguir para simulação"
-                                : "avaliar manualmente"}
-                            </span>
-                          </div>
+                          {contract.possible.length ? (
+                            <>
+                              <div className="best-routes-heading first-choice-heading">
+                                <div>
+                                  <span className="first-choice-label">
+                                    1ª SUGESTÃO · ESCOLHA PRINCIPAL
+                                  </span>
+                                  <h4>{contract.possible[0].bank}</h4>
+                                  <strong className="first-choice-mode">
+                                    {contract.possible[0].mode}
+                                  </strong>
+                                </div>
+                                <span className="simulate-first">
+                                  SIMULAR PRIMEIRO
+                                </span>
+                              </div>
+                              <p className="first-choice-reason">
+                                <span>✓</span>
+                                {contract.possible[0].reason}
+                              </p>
 
-                          {contract.possible.length > 0 && (
-                            <div className="route-reasons">
-                              {contract.possible.slice(0, 3).map((item) => (
-                                <div key={item.bank}>
-                                  <span className="route-check">✓</span>
-                                  <div>
-                                    <strong>
-                                      {item.bank} · {item.mode}
-                                    </strong>
-                                    <small>{item.reason}</small>
+                              {contract.possible.length > 1 && (
+                                <div className="secondary-routes">
+                                  <span className="mini-label">
+                                    OUTRAS OPÇÕES, EM ORDEM DE PRIORIDADE
+                                  </span>
+                                  <div className="route-reasons">
+                                    {contract.possible
+                                      .slice(1, 4)
+                                      .map((item, routeIndex) => (
+                                        <div key={item.bank}>
+                                          <span className="route-check">
+                                            {routeIndex + 2}º
+                                          </span>
+                                          <div>
+                                            <strong>
+                                              {item.bank} · {item.mode}
+                                            </strong>
+                                            <small>{item.reason}</small>
+                                          </div>
+                                        </div>
+                                      ))}
                                   </div>
                                 </div>
-                              ))}
+                              )}
+                            </>
+                          ) : (
+                            <div className="best-routes-heading">
+                              <div>
+                                <span className="mini-label">
+                                  DESTINOS POSSÍVEIS PELO ROTEIRO
+                                </span>
+                                <h4>Nenhuma rota automática encontrada</h4>
+                              </div>
+                              <span>avaliar manualmente</span>
                             </div>
                           )}
                         </div>
@@ -1291,6 +1584,8 @@ export default function Home() {
             </p>
           </footer>
         </section>
+      ) : view === "calculator" ? (
+        <CalculatorView onBack={() => setView("chat")} />
       ) : (
         <section className="workspace rules-workspace">
           <header className="workspace-header rules-header">

@@ -52,17 +52,19 @@ test("compares an extracted contract against all 15 INSS rulebooks", () => {
 
   assert.equal(contract.offers.length, 15);
   assert.deepEqual(possibleBanks, [
-    "Finanto",
     "Digio",
     "Total Cash",
     "iCred",
     "Acredto",
-    "Happy",
     "Daycoval",
     "Quero Mais Crédito",
-    "Banrisul",
+    "Finanto",
     "BMG",
+    "Happy",
+    "Banrisul",
   ]);
+  assert.equal(contract.possible[0].mode, "Portabilidade + refin");
+  assert.equal(contract.possible.at(-1).mode, "Portabilidade pura");
   assert.ok(blockedBanks.includes("Quali"));
   assert.ok(blockedBanks.includes("Facta"));
   assert.ok(blockedBanks.includes("C6 Bank"));

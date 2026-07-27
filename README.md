@@ -127,7 +127,9 @@ pela CIP.
 ## Simulação de refinanciamento C6
 
 A aba **Simulações** inicia a automação do refinanciamento de carteira INSS no
-portal C6. O operador informa o CPF e recebe no Império IA:
+portal C6. O operador envia o extrato normalmente. Quando o sistema identifica
+um contrato de carteira C6, abre a área de simulação, consulta o portal em
+segundo plano e apresenta no Império IA:
 
 - tabela;
 - descrição da tabela;
@@ -136,28 +138,32 @@ portal C6. O operador informa o CPF e recebe no Império IA:
 - valor liberado ao cliente;
 - prazo.
 
-Para proteger o acesso bancário, a automação utiliza o
-**Conector C6 · Império IA**, disponível para download dentro da própria aba.
-O usuário e a senha do C6 ficam no armazenamento local da extensão do Chrome e
-não são enviados ao site nem incluídos no GitHub.
+Não é necessário instalar extensão, abrir outra aba ou digitar novamente o CPF.
+O acesso bancário fica somente nas variáveis secretas do servidor e nunca é
+enviado ao navegador nem incluído no GitHub.
 
 O perfil utilizado no C6 precisa exibir
-**Cadastro > Proposta Consignado**. O conector interrompe o fluxo com uma
-mensagem clara quando essa permissão não está disponível.
+**Cadastro > Proposta Consignado**. A credencial deve ser exclusiva da
+integração: se o mesmo usuário estiver conectado em outra estação, o sistema
+interrompe a consulta sem derrubar a sessão existente e apresenta uma mensagem
+clara.
 
-O conector automatiza somente a simulação. Ele não grava proposta e não conclui
-contratação.
+A integração automatiza somente a simulação. Ela não grava proposta e não
+conclui contratação.
 
 ## Privacidade
 
-- O PDF do extrato é processado localmente no navegador sempre que possível.
+- O PDF do extrato é processado localmente no navegador.
 - O arquivo não é armazenado pelo sistema.
+- Quando há contrato C6, somente o CPF identificado é enviado ao servidor para
+  executar a consulta bancária solicitada.
 - CPF e número do benefício aparecem mascarados na interface.
 - Casos reais e dados pessoais de clientes não devem ser adicionados ao
   repositório.
 - O projeto não possui integração ativa com o Bevi Ajuda.
 - Tokens válidos são armazenados somente como hashes.
-- Credenciais do C6 não fazem parte do código nem das variáveis do site.
+- Credenciais do C6 não fazem parte do código e ficam apenas nas variáveis
+  secretas da hospedagem.
 - A chave utilizada para assinar a sessão fica nas variáveis protegidas da
   hospedagem.
 - A página de acesso limita tentativas repetidas no mesmo ponto de conexão.
@@ -217,6 +223,16 @@ Esses arquivos são ignorados pelo Git e nunca devem ser enviados ao GitHub. Ao
 trocar a lista de tokens, as variáveis protegidas da hospedagem também precisam
 ser atualizadas.
 
+Para habilitar a simulação automática do C6, configure também:
+
+```dotenv
+C6_CONSIG_USER=usuario_exclusivo_da_integracao
+C6_CONSIG_PASSWORD=senha_protegida_da_integracao
+```
+
+Em produção, ambas devem ser cadastradas como variáveis secretas. Não use esse
+mesmo usuário em outra estação durante as consultas automáticas.
+
 ## Estrutura principal
 
 ```text
@@ -228,11 +244,15 @@ app/
 lib/
   inss-extrato.mjs            Parser do extrato e motor de regras
   citizen-calculator.mjs      Cálculos de prestações fixas
+  c6-server.mjs               Automação protegida da simulação C6
+  c6-webforms.mjs             Leitura e envio dos formulários do portal C6
   token-auth.mjs              Validação de tokens e assinatura de sessão
 
 tests/
   inss-parser.test.mjs        Testes de extração e comparação bancária
   citizen-calculator.test.mjs Testes da calculadora
+  c6-server.test.mjs          Teste integral do fluxo bancário simulado
+  c6-webforms.test.mjs        Testes dos formulários e ofertas do C6
   token-auth.test.mjs         Testes da autenticação
   rendered-html.test.mjs      Testes de renderização e privacidade
 
@@ -271,6 +291,8 @@ A suíte atual verifica:
 - comparação com os 15 bancos;
 - restrições geográficas;
 - priorização da portabilidade com refinanciamento;
+- fluxo completo da simulação C6 com respostas controladas;
+- bloqueio seguro quando o usuário C6 já está ativo em outra estação;
 - cálculos de meses, taxa, prestação e valor financiado;
 - validação da privacidade na interface;
 - renderização da aplicação.

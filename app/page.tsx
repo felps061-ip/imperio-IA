@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 
 import {
@@ -14,7 +14,7 @@ import {
   formatCitizenResult,
   parseCitizenNumber,
 } from "@/lib/citizen-calculator.mjs";
-import { formatCpf, validateCpf } from "@/lib/c6-refin.mjs";
+import { validateCpf } from "@/lib/c6-refin.mjs";
 
 type View = "chat" | "rules" | "calculator" | "simulations";
 
@@ -97,8 +97,16 @@ type C6Offer = {
   term: string;
 };
 
-type C6ConnectorState = "checking" | "missing" | "ready" | "unconfigured";
 type C6SimulationState = "idle" | "running" | "done" | "error";
+
+function isC6OwnContract(contract: ContractAnalysis) {
+  return (
+    ["336", "626"].includes(contract.bankCode) ||
+    `${contract.bankCode} ${contract.bank}`
+      .toLocaleLowerCase("pt-BR")
+      .includes("c6")
+  );
+}
 
 const rulebooks = [
   {
@@ -1047,6 +1055,7 @@ function CalculatorView({ onBack }: { onBack: () => void }) {
   );
 }
 
+/* Conector local desativado: mantido temporariamente apenas como histórico.
 function C6RefinView({
   defaultCpf,
   onBack,
@@ -1379,6 +1388,238 @@ function C6RefinView({
   );
 }
 
+*/
+function AutomaticC6RefinView({
+  analysis,
+  state,
+  message,
+  offers,
+  onRun,
+  onSelectExtract,
+  onBack,
+}: {
+  analysis: AnalysisResult | null;
+  state: C6SimulationState;
+  message: string;
+  offers: C6Offer[];
+  onRun: (cpf: string) => void;
+  onSelectExtract: () => void;
+  onBack: () => void;
+}) {
+  const c6Contracts =
+    analysis?.contracts.filter(isC6OwnContract) ?? [];
+  const cpf = analysis?.client.cpf ?? "";
+  const canSimulate = c6Contracts.length > 0 && validateCpf(cpf);
+
+  const statusTitle =
+    state === "running"
+      ? "Simulação em andamento"
+      : state === "done"
+        ? "Retorno recebido"
+        : state === "error"
+          ? "Atenção necessária"
+          : analysis
+            ? "Extrato analisado"
+            : "Aguardando extrato";
+
+  return (
+    <section className="workspace c6-workspace">
+      <header className="workspace-header c6-header">
+        <div>
+          <div className="eyebrow">
+            <span className="live-dot" />
+            Simulação bancária automática
+          </div>
+          <h1>Refinanciamento C6</h1>
+          <p>
+            O extrato é lido e a consulta ao portal C6 acontece em segundo plano.
+          </p>
+        </div>
+        <div className="header-actions">
+          <span className="connector-badge connected">
+            <i />
+            Automação protegida no servidor
+          </span>
+        </div>
+      </header>
+
+      <div className="c6-content">
+        <section className="c6-simulator-card">
+          <div className="c6-card-heading">
+            <span className="c6-mark">C6</span>
+            <div>
+              <span className="mini-label">
+                REFINANCIAMENTO DE CARTEIRA · INSS
+              </span>
+              <h2>Simulação disparada pelo extrato</h2>
+              <p>
+                Não é necessário abrir o portal, instalar extensão ou preencher
+                novamente os dados do cliente.
+              </p>
+            </div>
+          </div>
+
+          {analysis ? (
+            <div className="c6-detected-client">
+              <div>
+                <span>Cliente identificado</span>
+                <strong>{analysis.client.name || "Nome não identificado"}</strong>
+              </div>
+              <div>
+                <span>CPF</span>
+                <strong>{cpf ? maskDocument(cpf) : "Não identificado"}</strong>
+              </div>
+              <div>
+                <span>Contratos C6</span>
+                <strong>{c6Contracts.length}</strong>
+              </div>
+            </div>
+          ) : (
+            <button className="c6-auto-upload" onClick={onSelectExtract}>
+              <span>↑</span>
+              <div>
+                <strong>Selecionar extrato INSS</strong>
+                <small>
+                  Ao localizar um contrato C6, a simulação começa automaticamente.
+                </small>
+              </div>
+            </button>
+          )}
+
+          <div
+            className={`c6-status ${state}`}
+            role={state === "error" ? "alert" : "status"}
+          >
+            <span>{state === "done" ? "✓" : state === "error" ? "!" : "↻"}</span>
+            <div>
+              <strong>{statusTitle}</strong>
+              <p>
+                {message ||
+                  (analysis
+                    ? c6Contracts.length
+                      ? "O contrato C6 foi identificado e está pronto para consulta."
+                      : "Nenhum contrato C6 foi localizado neste extrato."
+                    : "Envie o extrato para identificar o cliente e os contratos.")}
+              </p>
+            </div>
+          </div>
+
+          {state === "error" && canSimulate ? (
+            <button className="c6-retry" onClick={() => onRun(cpf)}>
+              Tentar simulação novamente
+            </button>
+          ) : null}
+        </section>
+
+        <aside className="c6-setup-card">
+          <span className="mini-label">FLUXO AUTOMÁTICO</span>
+          <h2>Do PDF ao resultado</h2>
+          <ol>
+            <li>
+              <span>1</span>
+              <p>
+                <strong>Leitura do extrato</strong>
+                O sistema identifica CPF e contratos C6.
+              </p>
+            </li>
+            <li>
+              <span>2</span>
+              <p>
+                <strong>Consulta protegida</strong>
+                O servidor acessa o portal e calcula o refinanciamento.
+              </p>
+            </li>
+            <li>
+              <span>3</span>
+              <p>
+                <strong>Ofertas na tela</strong>
+                Tabela, taxa, parcela, valor ao cliente e prazo são exibidos aqui.
+              </p>
+            </li>
+          </ol>
+          <p className="c6-security-note">
+            A credencial bancária não é enviada ao navegador nem aparece para o
+            operador.
+          </p>
+        </aside>
+      </div>
+
+      <section className="c6-results">
+        <div className="c6-results-heading">
+          <div>
+            <span className="mini-label">RESULTADO</span>
+            <h2>Condições disponíveis</h2>
+          </div>
+          <span>
+            {offers.length
+              ? `${offers.length} condição(ões)`
+              : state === "running"
+                ? "Consultando C6…"
+                : "Aguardando simulação"}
+          </span>
+        </div>
+
+        {offers.length ? (
+          <div className="c6-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tabela</th>
+                  <th>Descrição da tabela</th>
+                  <th>Taxa a.m.</th>
+                  <th>Parcela</th>
+                  <th>Valor cliente</th>
+                  <th>Prazo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {offers.map((offer, index) => (
+                  <tr key={`${offer.table}-${index}`}>
+                    <td>
+                      <strong>{offer.table || "—"}</strong>
+                    </td>
+                    <td>{offer.description || "—"}</td>
+                    <td>{offer.monthlyRate || "—"}</td>
+                    <td>{offer.installment || "—"}</td>
+                    <td className="client-value">
+                      {offer.clientValue || "—"}
+                    </td>
+                    <td>{offer.term || "108"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="c6-empty-results">
+            <span>R$</span>
+            <div>
+              <strong>
+                {state === "running"
+                  ? "Buscando as condições no C6"
+                  : "As ofertas aparecerão aqui"}
+              </strong>
+              <p>
+                O retorno mostrará tabela, descrição, taxa, parcela, valor
+                liberado ao cliente e prazo.
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <div className="c6-footer-note">
+        <span>i</span>
+        <p>
+          Esta ferramenta apenas simula. Ela não grava proposta nem conclui a
+          contratação. Revise o retorno antes de orientar o cliente.
+        </p>
+        <button onClick={onBack}>← Voltar ao atendimento</button>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const [view, setView] = useState<View>("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -1388,10 +1629,14 @@ export default function Home() {
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [uploadMessage, setUploadMessage] = useState("");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [c6State, setC6State] = useState<C6SimulationState>("idle");
+  const [c6Message, setC6Message] = useState("");
+  const [c6Offers, setC6Offers] = useState<C6Offer[]>([]);
   const [updatedBanks, setUpdatedBanks] = useState<string[]>([]);
   const [expandedRule, setExpandedRule] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const ruleUploadRef = useRef<HTMLInputElement>(null);
+  const c6RequestRef = useRef(0);
   const [pendingBank, setPendingBank] = useState<string | null>(null);
 
   function submitQuestion(event: FormEvent) {
@@ -1424,6 +1669,52 @@ export default function Home() {
     setQuestion(text);
   }
 
+  async function runC6Simulation(cpf: string) {
+    const requestId = c6RequestRef.current + 1;
+    c6RequestRef.current = requestId;
+    setC6State("running");
+    setC6Offers([]);
+    setC6Message(
+      "Entrando no C6, localizando a matrícula e calculando as condições…",
+    );
+
+    try {
+      const response = await fetch("/api/c6/refin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cpf: cpf.replace(/\D/g, "") }),
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+        offers?: C6Offer[];
+      };
+      if (!response.ok || !payload.ok) {
+        throw new Error(
+          payload.message || "O C6 não concluiu a simulação neste momento.",
+        );
+      }
+      if (requestId !== c6RequestRef.current) return;
+
+      const returnedOffers = Array.isArray(payload.offers)
+        ? payload.offers
+        : [];
+      setC6Offers(returnedOffers);
+      setC6State("done");
+      setC6Message(
+        `Simulação concluída com ${returnedOffers.length} condição(ões) retornada(s) pelo C6.`,
+      );
+    } catch (error) {
+      if (requestId !== c6RequestRef.current) return;
+      setC6State("error");
+      setC6Message(
+        error instanceof Error
+          ? error.message
+          : "O C6 não concluiu a simulação. Tente novamente.",
+      );
+    }
+  }
+
   async function handleCaseFile(file?: File) {
     if (!file) return;
     if (!file.name.toLocaleLowerCase("pt-BR").endsWith(".pdf")) {
@@ -1439,6 +1730,10 @@ export default function Home() {
 
     setFileName(file.name);
     setAnalysis(null);
+    c6RequestRef.current += 1;
+    setC6State("idle");
+    setC6Message("");
+    setC6Offers([]);
     setMessages([]);
     setUploadState("reading");
     setUploadMessage("Lendo o extrato e identificando os contratos…");
@@ -1461,6 +1756,19 @@ export default function Home() {
           text: `Análise concluída. Encontrei ${result.contracts.length} contrato(s) e comparei cada um com os ${activeRulebookCount} bancos INSS. As opções possíveis e os bloqueios estão detalhados abaixo.`,
         },
       ]);
+
+      const hasC6Contract = result.contracts.some(isC6OwnContract);
+      if (hasC6Contract) {
+        setView("simulations");
+        if (validateCpf(result.client.cpf)) {
+          void runC6Simulation(result.client.cpf);
+        } else {
+          setC6State("error");
+          setC6Message(
+            "O contrato C6 foi identificado, mas o CPF do extrato não pôde ser validado.",
+          );
+        }
+      }
     } catch (error) {
       setAnalysis(null);
       setUploadState("error");
@@ -1497,6 +1805,10 @@ export default function Home() {
             setUploadState("idle");
             setUploadMessage("");
             setAnalysis(null);
+            c6RequestRef.current += 1;
+            setC6State("idle");
+            setC6Message("");
+            setC6Offers([]);
             if (uploadRef.current) uploadRef.current.value = "";
             setView("chat");
           }}
@@ -1570,6 +1882,17 @@ export default function Home() {
         </div>
       </aside>
 
+      <input
+        ref={uploadRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        hidden
+        onChange={(event) => {
+          void handleCaseFile(event.target.files?.[0]);
+          event.target.value = "";
+        }}
+      />
+
       {view === "chat" ? (
         <section className="workspace">
           <header className="workspace-header">
@@ -1625,16 +1948,6 @@ export default function Home() {
                 </div>
               </div>
 
-              <input
-                ref={uploadRef}
-                type="file"
-                accept=".pdf,application/pdf"
-                hidden
-                onChange={(event) => {
-                  void handleCaseFile(event.target.files?.[0]);
-                  event.target.value = "";
-                }}
-              />
               <button
                 className={`upload-card ${uploadState}`}
                 onClick={() => uploadRef.current?.click()}
@@ -2238,8 +2551,13 @@ export default function Home() {
       ) : view === "calculator" ? (
         <CalculatorView onBack={() => setView("chat")} />
       ) : view === "simulations" ? (
-        <C6RefinView
-          defaultCpf={analysis?.client.cpf}
+        <AutomaticC6RefinView
+          analysis={analysis}
+          state={c6State}
+          message={c6Message}
+          offers={c6Offers}
+          onRun={(cpf) => void runC6Simulation(cpf)}
+          onSelectExtract={() => uploadRef.current?.click()}
           onBack={() => setView("chat")}
         />
       ) : (

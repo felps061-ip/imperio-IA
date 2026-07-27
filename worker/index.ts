@@ -7,12 +7,18 @@ import {
   isAccessTokenValid,
   readCookie,
 } from "../lib/token-auth.mjs";
+import {
+  C6SimulationError,
+  simulateC6Refinancing,
+} from "../lib/c6-server.mjs";
 
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   IMPERIO_ACCESS_COOKIE_SECRET?: string;
   IMPERIO_ACCESS_TOKEN_HASHES?: string;
+  C6_CONSIG_USER?: string;
+  C6_CONSIG_PASSWORD?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -39,6 +45,7 @@ const loginAttempts = new Map<
   string,
   { attempts: number; blockedUntil: number }
 >();
+let c6SimulationInFlight = false;
 
 function securityHeaders(contentType = "text/html; charset=utf-8") {
   return {
@@ -430,6 +437,120 @@ async function handleTokenLogin(request: Request, env: Env) {
   );
 }
 
+function jsonResponse(
+  payload: Record<string, unknown>,
+  status = 200,
+) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: securityHeaders("application/json; charset=utf-8"),
+  });
+}
+
+async function handleC6Simulation(request: Request, env: Env) {
+  if (!env.C6_CONSIG_USER || !env.C6_CONSIG_PASSWORD) {
+    return jsonResponse(
+      {
+        ok: false,
+        code: "C6_NOT_CONFIGURED",
+        message: "A integração protegida do C6 ainda não foi configurada.",
+      },
+      503,
+    );
+  }
+
+  if (c6SimulationInFlight) {
+    return jsonResponse(
+      {
+        ok: false,
+        code: "C6_BUSY",
+        message:
+          "Já existe uma simulação C6 em andamento. Aguarde alguns segundos.",
+      },
+      409,
+    );
+  }
+
+  let body: { cpf?: unknown };
+  try {
+    body = (await request.json()) as { cpf?: unknown };
+  } catch {
+    return jsonResponse(
+      {
+        ok: false,
+        code: "INVALID_REQUEST",
+        message: "Não foi possível ler os dados da simulação.",
+      },
+      400,
+    );
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55_000);
+  c6SimulationInFlight = true;
+
+  try {
+    const result = await simulateC6Refinancing(
+      {
+        cpf: String(body.cpf || ""),
+        user: env.C6_CONSIG_USER,
+        password: env.C6_CONSIG_PASSWORD,
+      },
+      { signal: controller.signal },
+    );
+    return jsonResponse({ ok: true, ...result });
+  } catch (error) {
+    if (error instanceof C6SimulationError) {
+      const status =
+        error.code === "CPF_INVALID"
+          ? 400
+          : error.code === "C6_SESSION_BUSY" || error.code === "C6_BUSY"
+            ? 409
+            : error.code === "C6_NO_CONTRACT" ||
+                error.code === "C6_NO_INSTALLMENT" ||
+                error.code === "C6_NO_OFFERS"
+              ? 422
+              : error.code === "C6_NOT_CONFIGURED" ||
+                  error.code === "C6_NO_PERMISSION"
+                ? 503
+                : 502;
+      return jsonResponse(
+        {
+          ok: false,
+          code: error.code,
+          message: error.message,
+        },
+        status,
+      );
+    }
+
+    if (controller.signal.aborted) {
+      return jsonResponse(
+        {
+          ok: false,
+          code: "C6_TIMEOUT",
+          message:
+            "O C6 demorou além do esperado. Tente novamente em alguns instantes.",
+        },
+        504,
+      );
+    }
+
+    return jsonResponse(
+      {
+        ok: false,
+        code: "C6_UNEXPECTED",
+        message:
+          "O portal C6 não concluiu a simulação. Tente novamente mais tarde.",
+      },
+      502,
+    );
+  } finally {
+    clearTimeout(timeout);
+    c6SimulationInFlight = false;
+  }
+}
+
 // Image security config. SVG sources with .svg extension auto-skip the
 // optimization endpoint on the client side (served directly, no proxy).
 // To route SVGs through the optimizer (with security headers), set
@@ -472,6 +593,10 @@ const worker = {
       return redirect(
         `/acesso?return_to=${encodeURIComponent(safeReturnPath(returnPath))}`,
       );
+    }
+
+    if (url.pathname === "/api/c6/refin" && request.method === "POST") {
+      return handleC6Simulation(request, env);
     }
 
     if (url.pathname === "/_vinext/image") {

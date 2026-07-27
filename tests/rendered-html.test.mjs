@@ -36,13 +36,16 @@ test("server-renders the Império IA product shell", async () => {
   assert.match(html, /Assistente operacional/);
   assert.match(html, /INSS · Portabilidade/);
   assert.match(html, /Base de roteiros/);
-  assert.match(html, /12 bancos INSS/);
+  assert.match(html, /15(?:<!-- -->)? bancos INSS/);
   assert.match(html, /PRONTO PARA ANALISAR/);
   assert.match(html, /Leitura automática ativa/);
   assert.match(html, /iCred/);
   assert.match(html, /Finanto/);
   assert.match(html, /C6 Bank/);
   assert.match(html, /Happy/);
+  assert.match(html, /Acredto/);
+  assert.match(html, /Quero Mais Crédito/);
+  assert.match(html, /Total Cash/);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview/);
 });
 
@@ -62,6 +65,9 @@ test("keeps the real client case and source PDFs out of the app", async () => {
   assert.match(page, /bank: "C6 Bank"/);
   assert.match(page, /bank: "BRB"/);
   assert.match(page, /bank: "Happy"/);
+  assert.match(page, /bank: "Acredto"/);
+  assert.match(page, /bank: "Quero Mais Crédito"/);
+  assert.match(page, /bank: "Total Cash"/);
   assert.match(page, /extractPdfText/);
   assert.match(page, /analyzeInssExtract/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);

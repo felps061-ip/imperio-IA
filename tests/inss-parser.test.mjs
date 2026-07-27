@@ -5,6 +5,7 @@ import {
   analyzeInssExtract,
   calculateMonthlyRate,
   getInssSpeciesStatus,
+  INSS_GENERAL_RULES,
   parseInssExtract,
 } from "../lib/inss-extrato.mjs";
 
@@ -31,6 +32,8 @@ test("extracts the structured INSS fields and contract table", () => {
   assert.equal(parsed.client.name, "CLIENTE DE TESTE");
   assert.equal(parsed.client.speciesCode, "41");
   assert.equal(parsed.client.ageYears, 66);
+  assert.equal(parsed.client.city, "BRASILIA");
+  assert.equal(parsed.client.state, "DF");
   assert.equal(parsed.financial.availableMargin, 124.61);
   assert.equal(parsed.contracts.length, 1);
   assert.equal(parsed.contracts[0].bankCode, "626");
@@ -40,27 +43,31 @@ test("extracts the structured INSS fields and contract table", () => {
   assert.ok(parsed.contracts[0].calculatedRate > 1.8);
 });
 
-test("compares an extracted contract against all 12 INSS rulebooks", () => {
+test("compares an extracted contract against all 15 INSS rulebooks", () => {
   const analysis = analyzeInssExtract(extractFixture);
   const contract = analysis.contracts[0];
   const possibleBanks = contract.possible.map((item) => item.bank);
   const blockedBanks = contract.blocked.map((item) => item.bank);
   const reviewBanks = contract.review.map((item) => item.bank);
 
-  assert.equal(contract.offers.length, 12);
+  assert.equal(contract.offers.length, 15);
   assert.deepEqual(possibleBanks, [
     "Finanto",
     "Digio",
+    "Total Cash",
     "iCred",
+    "Acredto",
     "Happy",
     "Daycoval",
+    "Quero Mais Crédito",
+    "Banrisul",
     "BMG",
   ]);
   assert.ok(blockedBanks.includes("Quali"));
   assert.ok(blockedBanks.includes("Facta"));
   assert.ok(blockedBanks.includes("C6 Bank"));
   assert.ok(blockedBanks.includes("BRB"));
-  assert.deepEqual(reviewBanks, ["Banrisul", "PAN"]);
+  assert.deepEqual(reviewBanks, ["PAN"]);
 });
 
 test("recalculates the monthly rate from payoff, installment and remaining term", () => {
@@ -78,7 +85,7 @@ test("uses the official species list as a global eligibility gate", () => {
   );
   assert.equal(nonConsignable.speciesStatus.status, "non_consignable");
   assert.equal(nonConsignable.contracts[0].possible.length, 0);
-  assert.equal(nonConsignable.contracts[0].blocked.length, 12);
+  assert.equal(nonConsignable.contracts[0].blocked.length, 15);
   assert.ok(
     nonConsignable.contracts[0].blocked.every((item) =>
       item.reason.includes("Espécie 31 não consignável"),
@@ -93,5 +100,56 @@ test("sends an unlisted species to manual review instead of approving it", () =>
 
   assert.equal(unknown.speciesStatus.status, "unknown");
   assert.equal(unknown.contracts[0].possible.length, 0);
-  assert.equal(unknown.contracts[0].review.length, 12);
+  assert.equal(unknown.contracts[0].review.length, 15);
+});
+
+test("applies the July 2026 geographic restrictions", () => {
+  const restricted = analyzeInssExtract(
+    extractFixture
+      .replace("626 - C6 CONSIG", "029 - BANCO DE ORIGEM")
+      .replace("UF: DF", "UF: AP"),
+  );
+  const decisions = new Map(
+    restricted.contracts[0].offers.map((item) => [item.bank, item]),
+  );
+
+  assert.equal(decisions.get("Finanto").status, "blocked");
+  assert.equal(decisions.get("iCred").status, "blocked");
+  assert.equal(decisions.get("Total Cash").status, "review");
+  assert.match(decisions.get("Total Cash").reason, /Formalização híbrida/);
+  assert.equal(decisions.get("BRB").status, "blocked");
+
+  const municipal = analyzeInssExtract(
+    extractFixture
+      .replace("626 - C6 CONSIG", "029 - BANCO DE ORIGEM")
+      .replace("Cidade: BRASILIA UF: DF", "Cidade: POÇOS DE CALDAS UF: MG"),
+  );
+  const daycoval = municipal.contracts[0].offers.find(
+    (item) => item.bank === "Daycoval",
+  );
+  assert.equal(daycoval.status, "review");
+  assert.match(daycoval.reason, /Formalização híbrida/);
+});
+
+test("blocks Total Cash portability for species 32", () => {
+  const analysis = analyzeInssExtract(
+    extractFixture
+      .replace("Espécie: 41", "Espécie: 32")
+      .replace("626 - C6 CONSIG", "029 - BANCO DE ORIGEM"),
+  );
+  const totalCash = analysis.contracts[0].offers.find(
+    (item) => item.bank === "Total Cash",
+  );
+
+  assert.equal(analysis.speciesStatus.status, "consignable");
+  assert.equal(totalCash.status, "blocked");
+  assert.match(totalCash.reason, /suspensas para a espécie 32/);
+});
+
+test("exposes the current INSS ceiling, margins, term and contract limits", () => {
+  assert.equal(INSS_GENERAL_RULES.loanRateCeiling, 1.85);
+  assert.equal(INSS_GENERAL_RULES.regularLoanMargin.noCard, 40);
+  assert.equal(INSS_GENERAL_RULES.bpcLoanMargin.oneCard, 30);
+  assert.equal(INSS_GENERAL_RULES.maxTerm, 108);
+  assert.equal(INSS_GENERAL_RULES.maxLoanContracts, 13);
 });

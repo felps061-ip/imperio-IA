@@ -6,6 +6,7 @@ import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 import {
   analyzeInssExtract,
   formatMoney,
+  INSS_GENERAL_RULES,
   maskDocument,
 } from "@/lib/inss-extrato.mjs";
 
@@ -57,6 +58,7 @@ type AnalysisResult = {
     species: string;
     ageYears: number;
     ageMonths: number;
+    city: string;
     state: string;
   };
   banking: {
@@ -94,8 +96,8 @@ const rulebooks = [
   {
     bank: "Facta",
     color: "green",
-    version: "mai/26",
-    updated: "05 mai 2026",
+    version: "jul/26",
+    updated: "24 jul 2026",
     scope: "INSS · Empréstimo",
     status: "active",
     criteria: "Origem · parcela · margem",
@@ -127,8 +129,8 @@ const rulebooks = [
   {
     bank: "Banrisul",
     color: "violet",
-    version: "v04",
-    updated: "mai 2026",
+    version: "jul/26",
+    updated: "24 jul 2026",
     scope: "INSS · Empréstimo",
     status: "active",
     criteria: "Idade · valor · produto",
@@ -138,8 +140,8 @@ const rulebooks = [
   {
     bank: "iCred",
     color: "lime",
-    version: "V20",
-    updated: "09 mar 2026",
+    version: "jul/26",
+    updated: "24 jul 2026",
     scope: "INSS · Empréstimo",
     status: "active",
     criteria: "Idade · benefício · produto",
@@ -149,8 +151,8 @@ const rulebooks = [
   {
     bank: "Finanto",
     color: "emerald",
-    version: "23/03",
-    updated: "23 mar 2026",
+    version: "jul/26",
+    updated: "24 jul 2026",
     scope: "INSS · Empréstimo",
     status: "active",
     criteria: "Saldo · parcela · pagas",
@@ -171,8 +173,8 @@ const rulebooks = [
   {
     bank: "Daycoval",
     color: "aqua",
-    version: "V70.0",
-    updated: "18 fev 2026",
+    version: "jul/26",
+    updated: "24 jul 2026",
     scope: "INSS · Empréstimo",
     status: "active",
     criteria: "Idade · invalidez · CIP",
@@ -182,8 +184,8 @@ const rulebooks = [
   {
     bank: "C6 Bank",
     color: "black",
-    version: "jul/25",
-    updated: "jul 2025",
+    version: "jul/26",
+    updated: "24 jul 2026",
     scope: "INSS · Empréstimo",
     status: "active",
     criteria: "Produto · origem · invalidez",
@@ -213,6 +215,39 @@ const rulebooks = [
       "Produtos, espécies, idade final, prazo de até 96 meses e portabilidade com refin.",
   },
   {
+    bank: "Acredto",
+    color: "violet",
+    version: "24/07",
+    updated: "24 jul 2026",
+    scope: "INSS · Empréstimo",
+    status: "active",
+    criteria: "Saldo · troco · múltiplos",
+    detail:
+      "Portabilidade pura a partir de R$ 6 mil, refin a partir de R$ 4 mil e até 13 contratos.",
+  },
+  {
+    bank: "Quero Mais Crédito",
+    color: "orange",
+    version: "jul/26",
+    updated: "15 jul 2026",
+    scope: "INSS · Empréstimo",
+    status: "active",
+    criteria: "Parcela · margem · refin",
+    detail:
+      "Parcela mínima de R$ 20, refin obrigatório, margem negativa e formalização por localidade.",
+  },
+  {
+    bank: "Total Cash",
+    color: "cyan",
+    version: "jul/26",
+    updated: "15 jul 2026",
+    scope: "INSS · Empréstimo",
+    status: "active",
+    criteria: "Ticket · espécie · produto",
+    detail:
+      "Ticket de R$ 4 mil, troco mínimo de R$ 100, portabilidade pura e suspensão da espécie 32.",
+  },
+  {
     bank: "Facta",
     color: "slate",
     version: "26/05",
@@ -225,10 +260,60 @@ const rulebooks = [
   },
 ];
 
+const activeRulebookCount = rulebooks.filter(
+  (rulebook) => rulebook.status === "active",
+).length;
+
 function statusLabel(status: OfferStatus) {
   if (status === "eligible") return "Possível";
   if (status === "review") return "Revisar";
   return "Não opera";
+}
+
+function operationalGuide(bank: string) {
+  const guides: Record<string, string> = {
+    Banrisul:
+      "No Banrisul: acesse Venda 4.0, escolha a modalidade de portabilidade, informe o contrato, simule, complete agente e dados do cliente e siga para formalização. Na Port Especial, o refin ocorre depois da averbação.",
+    "C6 Bank":
+      "No C6: Cadastro > Proposta Consignado > Portabilidade. Informe origem, contrato, parcela, saldo e parcelas a vencer; calcule a oferta e, no refin, use a tabela correspondente à portabilidade antes de gravar.",
+    Daycoval:
+      "No Daycoval: valide primeiro no simulador, abra Simulação de Ofertas, escolha Port + Refin, informe os dados do contrato e use tabelas combinadas com a mesma numeração antes de gerar as propostas.",
+    iCred:
+      "No iCred: Simular INSS > iFlow, informe CPF e telefone, aguarde as ofertas, avance até Port + Refin, escolha a tabela e complete dados pessoais, endereço e pagamento antes de gravar.",
+    "Quero Mais Crédito":
+      "No Quero Mais: autentique com o token do app Correspondente Daycoval, abra Simulação de Ofertas, escolha Port + Refin, use as tabelas combinadas, complete os dados e gere as duas propostas.",
+    "Total Cash":
+      "No Total Cash: autorize a IN100, informe benefício e margem, cadastre contrato, saldo, parcela, prazo e taxa, inclua a proposta, complete dados bancários e pessoais e envie o link de assinatura.",
+  };
+  return guides[bank];
+}
+
+function refinancingGuide(bank: string) {
+  const guides: Record<string, string> = {
+    Banrisul:
+      "Refin de carteira Banrisul: libera no mínimo R$ 200, parcela mínima R$ 8 e exige 5 pagas para contratos de R$ 5 mil ou mais, ou 10 pagas abaixo disso.",
+    BMG:
+      "Refin de carteira BMG: libera no mínimo R$ 50 e normalmente exige 5 parcelas pagas; contratos em 108 parcelas podem ter exceção.",
+    BRB:
+      "Refin de carteira BRB: libera no mínimo R$ 50, exige 6 parcelas pagas e não aceita parcelas em atraso.",
+    "C6 Bank":
+      "Refin de carteira C6: troco mínimo de R$ 700 ou 5% do financiado; exige 6 pagas nos prazos 84/96 ou 7% nos demais prazos.",
+    Daycoval:
+      "Refin de carteira Daycoval: libera no mínimo R$ 100, parcela mínima R$ 20 e exige 6 pagas em tabela normal; margem livre pode ter regra de 7 dias.",
+    Digio:
+      "Refin de carteira Digio: libera no mínimo R$ 250, não exige mínimo de parcelas pagas e não permite redução por margem negativa.",
+    Facta:
+      "Refin de carteira Facta: libera no mínimo R$ 100, parcela mínima R$ 50 e exige 4 parcelas pagas.",
+    Finanto:
+      "A Finanto está com refinanciamento de carteira suspenso, exceto redigitação de refin de portabilidade cancelado.",
+    iCred:
+      "Refin de carteira iCred: libera no mínimo R$ 100, exige 12 pagas e não aceita margem negativa. Na retenção, a tabela não remunera e há coobrigação até a 3ª parcela.",
+    PAN:
+      "Refin de carteira PAN: libera no mínimo R$ 50 e exige 9 pagas, ou taxa de até 1,80%; a tabela PAN13 possui regra própria.",
+    "Quero Mais Crédito":
+      "Refin de carteira Quero Mais: libera no mínimo R$ 100, parcela mínima R$ 20 e exige 6 pagas em tabela normal; margem livre pode ter regra de 7 dias.",
+  };
+  return guides[bank];
 }
 
 async function extractPdfText(file: File) {
@@ -259,13 +344,41 @@ async function extractPdfText(file: File) {
 
 function assistantReply(question: string, analysis: AnalysisResult | null) {
   const normalized = question.toLocaleLowerCase("pt-BR");
-  const mentionedBank = analysis
-    ? rulebooks
-        .filter((rulebook) => rulebook.status === "active")
-        .find((rulebook) =>
-          normalized.includes(rulebook.bank.toLocaleLowerCase("pt-BR")),
-        )
-    : undefined;
+  const activeRulebooks = rulebooks.filter(
+    (rulebook) => rulebook.status === "active",
+  );
+  const mentionedBank = activeRulebooks.find((rulebook) =>
+    normalized.includes(rulebook.bank.toLocaleLowerCase("pt-BR")),
+  );
+  const asksRefinancing =
+    normalized.includes("refinanciamento de carteira") ||
+    normalized.includes("refin de carteira") ||
+    normalized.includes("retenção");
+
+  if (
+    !asksRefinancing &&
+    mentionedBank &&
+    (normalized.includes("digitar") ||
+      normalized.includes("simular") ||
+      normalized.includes("passo") ||
+      normalized.includes("fluxo") ||
+      normalized.includes("portal"))
+  ) {
+    return (
+      operationalGuide(mentionedBank.bank) ??
+      `O fluxo de ${mentionedBank.bank} está catalogado, mas essa etapa depende do portal e da tabela comercial vigente. Primeiro confirme a elegibilidade no extrato e depois siga a esteira do banco.`
+    );
+  }
+
+  if (asksRefinancing) {
+    if (mentionedBank) {
+      return (
+        refinancingGuide(mentionedBank.bank) ??
+        `O refinanciamento de carteira só pode ocorrer no mesmo banco do contrato. A regra detalhada de ${mentionedBank.bank} precisa ser confirmada na tabela vigente.`
+      );
+    }
+    return "O refinanciamento de carteira só pode ser feito no mesmo banco do contrato ativo. Informe o banco para eu responder mínimo de parcelas pagas, troco, parcela e tratamento da margem.";
+  }
 
   if (analysis && mentionedBank) {
     const decisions = analysis.contracts.slice(0, 4).map((contract) => {
@@ -315,17 +428,44 @@ function assistantReply(question: string, analysis: AnalysisResult | null) {
     normalized.includes("cadastrados") ||
     normalized.includes("roteiros")
   ) {
-    return "A base INSS tem 12 bancos ativos: Quali, Facta, BMG, PAN, Banrisul, iCred, Finanto, Digio, Daycoval, C6 Bank, BRB e Happy. O roteiro SIAPE da Facta está catalogado separadamente para a próxima fase.";
+    return `A base INSS tem ${activeRulebookCount} bancos ativos: ${activeRulebooks.map((item) => item.bank).join(", ")}. O roteiro SIAPE da Facta está catalogado separadamente para a próxima fase.`;
   }
   if (
     normalized.includes("novos") ||
     normalized.includes("adicionados") ||
     normalized.includes("chegaram")
   ) {
-    return "Foram adicionados sete roteiros INSS, cada um com sua própria versão: iCred V20, Finanto 23/03, Digio V21, Daycoval V70.0, C6 jul/25, BRB jan/26 e Happy V03.";
+    return "Foram lidos 18 novos materiais: regras gerais de margem, taxa, prazo, contratos, público vulnerável, restrições geográficas, fluxo de proposta e guias de simulação. Acredto, Quero Mais Crédito e Total Cash também entraram na comparação automática.";
   }
   if (normalized.includes("margem negativa")) {
-    return "A margem negativa varia por produto e banco. Nos novos roteiros, a Finanto informa que não opera; o iCred permite tratamento apenas em condições específicas de refinanciamento ou portabilidade; e o Daycoval prevê abatimento somente no refinanciamento. A decisão final ainda depende da operação e da versão vigente.";
+    return "A margem negativa deve ser abatida de uma única parcela, nunca dividida entre vários contratos. Banrisul, BRB, C6, Daycoval, Facta, Finanto, iCred, Quero Mais e Total Cash possuem tratamentos próprios; o motor aplica a regra conforme o banco e o produto.";
+  }
+  if (normalized.includes("taxa teto")) {
+    return `A taxa teto informada no material é ${INSS_GENERAL_RULES.loanRateCeiling.toFixed(2).replace(".", ",")}% a.m. para empréstimo e ${INSS_GENERAL_RULES.cardRateCeiling.toFixed(2).replace(".", ",")}% a.m. para RMC/RCC.`;
+  }
+  if (normalized.includes("prazo máximo") || normalized.includes("108")) {
+    return `Desde ${INSS_GENERAL_RULES.effectiveFrom}, o prazo máximo geral pode chegar a ${INSS_GENERAL_RULES.maxTerm} parcelas, sujeito à política de cada banco.`;
+  }
+  if (
+    normalized.includes("quantos contratos") ||
+    normalized.includes("linhas consignáveis") ||
+    normalized.includes("limite de contratos")
+  ) {
+    return `O benefício pode ter até ${INSS_GENERAL_RULES.maxLoanContracts} contratos ativos de empréstimo e até ${INSS_GENERAL_RULES.maxCardContracts} cartões, sendo um RMC e um RCC. BPC/LOAS pode ter apenas um cartão ativo.`;
+  }
+  if (normalized.includes("público vulnerável")) {
+    return "A vulnerabilidade pode considerar idade, renda, escolaridade, maturidade digital, capacidade civil, deficiência, doença grave e superendividamento. Alguns bancos apenas alertam; Daycoval, Digio, iCred e Quero Mais podem encaminhar para análise interna.";
+  }
+  if (normalized.includes("calculadora do cidadão")) {
+    return "Na Calculadora do Cidadão, informe parcelas restantes, taxa mensal e valor da parcela. O valor financiado retornado funciona como saldo devedor aproximado; use apenas como referência, porque a CIP confirma o saldo real.";
+  }
+  if (
+    normalized.includes("margem") &&
+    (normalized.includes("40") ||
+      normalized.includes("cartão") ||
+      normalized.includes("bpc"))
+  ) {
+    return "Após 19/05/2026, aposentados e pensionistas têm até 40% sem cartão, 35% com um cartão e 30% com RMC e RCC. BPC/LOAS tem até 35% sem cartão ou 30% com um cartão.";
   }
   if (normalized.includes("taxa")) {
     return "A taxa é recalculada com parcela, saldo de quitação e parcelas restantes. A taxa aproximada impressa no extrato fica apenas como referência.";
@@ -333,7 +473,7 @@ function assistantReply(question: string, analysis: AnalysisResult | null) {
 
   return analysis
     ? "A análise já está pronta. Pergunte onde cada contrato pode ser portado, por que um banco bloqueou ou como a taxa foi calculada."
-    : "Posso explicar as regras dos 12 bancos INSS cadastrados. Para analisar um cliente automaticamente, anexe o extrato em PDF.";
+    : `Posso explicar as regras dos ${activeRulebookCount} bancos INSS cadastrados. Para analisar um cliente automaticamente, anexe o extrato em PDF.`;
 }
 
 function StatusPill({
@@ -412,7 +552,9 @@ export default function Home() {
 
     try {
       const text = await extractPdfText(file);
-      setUploadMessage("Comparando cada contrato com os 12 bancos…");
+      setUploadMessage(
+        `Comparando cada contrato com os ${activeRulebookCount} bancos…`,
+      );
       const result = analyzeInssExtract(text) as AnalysisResult;
       setAnalysis(result);
       setUploadState("ready");
@@ -423,7 +565,7 @@ export default function Home() {
         {
           id: Date.now(),
           role: "assistant",
-          text: `Análise concluída. Encontrei ${result.contracts.length} contrato(s) e comparei cada um com os 12 bancos INSS. As opções possíveis e os bloqueios estão detalhados abaixo.`,
+          text: `Análise concluída. Encontrei ${result.contracts.length} contrato(s) e comparei cada um com os ${activeRulebookCount} bancos INSS. As opções possíveis e os bloqueios estão detalhados abaixo.`,
         },
       ]);
     } catch (error) {
@@ -489,7 +631,7 @@ export default function Home() {
           >
             <span className="nav-icon">≡</span>
             Roteiros
-            <span className="nav-count">13</span>
+            <span className="nav-count">{rulebooks.length}</span>
           </button>
         </nav>
 
@@ -499,7 +641,7 @@ export default function Home() {
             <span className="recent-dot" />
             <span>
               Base de roteiros
-              <small>12 bancos INSS ativos</small>
+              <small>{activeRulebookCount} bancos INSS ativos</small>
             </span>
           </button>
           <div className="recent-empty">
@@ -617,7 +759,7 @@ export default function Home() {
                       <span className="mini-label">ANÁLISE AUTOMÁTICA CONCLUÍDA</span>
                       <h2>
                         {analysis.contracts.length} contrato(s) comparado(s) com
-                        12 bancos
+                        {activeRulebookCount} bancos
                       </h2>
                       <p>
                         A classificação abaixo usa os critérios objetivos dos
@@ -657,7 +799,7 @@ export default function Home() {
                     <div>
                       <span className="metric-icon warning">!</span>
                       <span>
-                        <strong>12</strong>
+                        <strong>{activeRulebookCount}</strong>
                         roteiros consultados
                       </span>
                     </div>
@@ -692,6 +834,12 @@ export default function Home() {
                       <small>
                         {analysis.client.ageYears} anos · nascimento{" "}
                         {analysis.client.birthDate}
+                      </small>
+                      <small>
+                        {analysis.client.city || "Cidade não identificada"}
+                        {analysis.client.state
+                          ? `/${analysis.client.state}`
+                          : ""}
                       </small>
                     </div>
                     <div>
@@ -826,7 +974,9 @@ export default function Home() {
 
                         <details className="bank-comparison">
                           <summary>
-                            <span>Comparação completa com os 12 bancos</span>
+                            <span>
+                              Comparação completa com os {activeRulebookCount} bancos
+                            </span>
                             <small>
                               {contract.possible.length} possíveis ·{" "}
                               {contract.review.length} revisar ·{" "}
@@ -896,7 +1046,9 @@ export default function Home() {
                     <div>
                       <span>3</span>
                       <strong>Comparar</strong>
-                      <small>cada parcela com os 12 bancos</small>
+                      <small>
+                        cada parcela com os {activeRulebookCount} bancos
+                      </small>
                     </div>
                   </div>
                 </div>
@@ -1170,17 +1322,17 @@ export default function Home() {
           <div className="rules-content">
             <div className="rules-overview">
               <div>
-                <span>12</span>
+                <span>{activeRulebookCount}</span>
                 <p>
                   <strong>Bancos INSS ativos</strong>
                   prontos para consulta
                 </p>
               </div>
               <div>
-                <span>12</span>
+                <span>18</span>
                 <p>
-                  <strong>Bases versionadas</strong>
-                  sem misturar os bancos
+                  <strong>Novos materiais lidos</strong>
+                  regras, fluxos e simulações
                 </p>
               </div>
               <div>
@@ -1248,6 +1400,8 @@ export default function Home() {
                         <li>Espécies aceitas e impedidas</li>
                         <li>Saldo, parcela e mínimo pago</li>
                         <li>Bancos de origem e exceções</li>
+                        <li>Restrições por UF e município</li>
+                        <li>Portabilidade pura ou com refin</li>
                       </ul>
                     )}
 

@@ -596,7 +596,7 @@ function CalculatorView({ onBack }: { onBack: () => void }) {
         </div>
         <div className="header-actions">
           <div className="header-brand" aria-hidden="true">
-            <img src="/imperio-signature.png" alt="" />
+            <img src="/imperio-wordmark.png" alt="" />
           </div>
           <a
             className="soft-button official-calculator-link"
@@ -953,7 +953,7 @@ export default function Home() {
             </div>
             <div className="header-actions">
               <div className="header-brand" aria-hidden="true">
-                <img src="/imperio-signature.png" alt="" />
+                <img src="/imperio-wordmark.png" alt="" />
               </div>
               <button className="soft-button" onClick={() => setView("rules")}>
                 Base de regras
@@ -1617,7 +1617,7 @@ export default function Home() {
             </div>
             <div className="header-actions">
               <div className="header-brand" aria-hidden="true">
-                <img src="/imperio-signature.png" alt="" />
+                <img src="/imperio-wordmark.png" alt="" />
               </div>
               <button
                 className="primary-button"

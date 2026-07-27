@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Configurar Conector C6 · Império IA</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <div class="brand">IMPÉRIO IA</div>
+      <span class="eyebrow">CONECTOR LOCAL</span>
+      <h1>Configurar acesso do C6</h1>
+      <p>
+        Estes dados ficam apenas no armazenamento do Chrome deste computador.
+        Eles não são enviados ao site Império IA nem incluídos no GitHub.
+      </p>
+
+      <form id="credentials-form">
+        <label>
+          Usuário do C6
+          <input id="c6-user" autocomplete="off" required />
+        </label>
+        <label>
+          Senha do C6
+          <input id="c6-password" type="password" autocomplete="new-password" required />
+        </label>
+        <button>Salvar acesso neste computador</button>
+      </form>
+
+      <div id="status" role="status"></div>
+      <aside>
+        <strong>Importante</strong>
+        <p>
+          O usuário precisa enxergar o menu Cadastro &gt; Proposta Consignado.
+          O conector apenas simula e nunca grava uma proposta.
+        </p>
+      </aside>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 
 import {
@@ -14,8 +14,9 @@ import {
   formatCitizenResult,
   parseCitizenNumber,
 } from "@/lib/citizen-calculator.mjs";
+import { formatCpf, validateCpf } from "@/lib/c6-refin.mjs";
 
-type View = "chat" | "rules" | "calculator";
+type View = "chat" | "rules" | "calculator" | "simulations";
 
 type ChatMessage = {
   id: number;
@@ -86,6 +87,18 @@ type AnalysisResult = {
   contracts: ContractAnalysis[];
   analyzedAt: string;
 };
+
+type C6Offer = {
+  table: string;
+  description: string;
+  monthlyRate: string;
+  installment: string;
+  clientValue: string;
+  term: string;
+};
+
+type C6ConnectorState = "checking" | "missing" | "ready" | "unconfigured";
+type C6SimulationState = "idle" | "running" | "done" | "error";
 
 const rulebooks = [
   {
@@ -1034,6 +1047,338 @@ function CalculatorView({ onBack }: { onBack: () => void }) {
   );
 }
 
+function C6RefinView({
+  defaultCpf,
+  onBack,
+}: {
+  defaultCpf?: string;
+  onBack: () => void;
+}) {
+  const [cpf, setCpf] = useState(formatCpf(defaultCpf ?? ""));
+  const [connector, setConnector] =
+    useState<C6ConnectorState>("checking");
+  const [simulationState, setSimulationState] =
+    useState<C6SimulationState>("idle");
+  const [statusMessage, setStatusMessage] = useState(
+    "Verificando o conector seguro deste computador…",
+  );
+  const [offers, setOffers] = useState<C6Offer[]>([]);
+
+  useEffect(() => {
+    let answered = false;
+
+    function handleConnectorMessage(event: MessageEvent) {
+      if (event.source !== window) return;
+      const data = event.data as {
+        source?: string;
+        type?: string;
+        configured?: boolean;
+        message?: string;
+        offers?: C6Offer[];
+      };
+      if (data?.source !== "imperio-c6-connector") return;
+
+      if (data.type === "IMPERIO_C6_CONNECTOR_READY") {
+        answered = true;
+        setConnector(data.configured ? "ready" : "unconfigured");
+        setStatusMessage(
+          data.configured
+            ? "Conector C6 pronto neste computador."
+            : "Conector instalado. Falta salvar o acesso do C6 nas opções da extensão.",
+        );
+      }
+
+      if (data.type === "IMPERIO_C6_REFIN_PROGRESS") {
+        setSimulationState("running");
+        setStatusMessage(data.message || "Executando a simulação no C6…");
+      }
+
+      if (data.type === "IMPERIO_C6_REFIN_RESULT") {
+        setSimulationState("done");
+        setOffers(Array.isArray(data.offers) ? data.offers : []);
+        setStatusMessage(
+          "Simulação concluída. Confira as condições retornadas pelo C6.",
+        );
+      }
+
+      if (data.type === "IMPERIO_C6_REFIN_ERROR") {
+        setSimulationState("error");
+        setStatusMessage(
+          data.message ||
+            "O C6 não concluiu a simulação. Confira o acesso e tente novamente.",
+        );
+      }
+    }
+
+    window.addEventListener("message", handleConnectorMessage);
+    window.postMessage(
+      { source: "imperio-ia", type: "IMPERIO_C6_PING" },
+      window.location.origin,
+    );
+
+    const timeout = window.setTimeout(() => {
+      if (!answered) {
+        setConnector("missing");
+        setStatusMessage(
+          "Conector C6 não detectado. Instale-o uma vez neste computador para automatizar o portal.",
+        );
+      }
+    }, 1400);
+
+    return () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener("message", handleConnectorMessage);
+    };
+  }, []);
+
+  function startSimulation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setOffers([]);
+
+    if (!validateCpf(cpf)) {
+      setSimulationState("error");
+      setStatusMessage("Informe um CPF válido para iniciar a simulação.");
+      return;
+    }
+
+    if (connector !== "ready") {
+      setSimulationState("error");
+      setStatusMessage(
+        connector === "unconfigured"
+          ? "Abra as opções do conector e salve o usuário e a senha do C6."
+          : "Instale e configure o conector C6 neste computador.",
+      );
+      return;
+    }
+
+    setSimulationState("running");
+    setStatusMessage("Abrindo o C6 e preparando o refinanciamento…");
+    window.postMessage(
+      {
+        source: "imperio-ia",
+        type: "IMPERIO_C6_REFIN_REQUEST",
+        cpf: cpf.replace(/\D/g, ""),
+      },
+      window.location.origin,
+    );
+  }
+
+  const connectorLabel = {
+    checking: "Verificando",
+    missing: "Não instalado",
+    ready: "Pronto",
+    unconfigured: "Configuração pendente",
+  }[connector];
+
+  return (
+    <section className="workspace c6-workspace">
+      <header className="workspace-header c6-header">
+        <div>
+          <div className="eyebrow">
+            <span className="live-dot" />
+            Simulação bancária
+          </div>
+          <h1>Refinanciamento C6</h1>
+          <p>
+            Consulte a carteira do cliente e receba as condições sem redigitar
+            o fluxo do portal.
+          </p>
+        </div>
+        <div className="header-actions">
+          <span
+            className={`connector-badge ${
+              connector === "ready" ? "connected" : ""
+            }`}
+          >
+            <i />
+            Conector: {connectorLabel}
+          </span>
+        </div>
+      </header>
+
+      <div className="c6-content">
+        <section className="c6-simulator-card">
+          <div className="c6-card-heading">
+            <span className="c6-mark">C6</span>
+            <div>
+              <span className="mini-label">REFINANCIAMENTO DE CARTEIRA · INSS</span>
+              <h2>Simular condições do cliente</h2>
+              <p>
+                O acesso do banco fica salvo somente no conector deste
+                computador. O site envia apenas o CPF da consulta.
+              </p>
+            </div>
+          </div>
+
+          <form className="c6-form" onSubmit={startSimulation}>
+            <label>
+              <span>CPF do cliente</span>
+              <small>Utilizado para localizar a matrícula e os contratos C6.</small>
+              <input
+                autoComplete="off"
+                inputMode="numeric"
+                value={cpf}
+                onChange={(event) => {
+                  setCpf(formatCpf(event.target.value));
+                  setSimulationState("idle");
+                  setStatusMessage(
+                    connector === "ready"
+                      ? "Conector C6 pronto neste computador."
+                      : statusMessage,
+                  );
+                }}
+                placeholder="000.000.000-00"
+                aria-label="CPF do cliente para simulação C6"
+              />
+            </label>
+            <button
+              className="c6-submit"
+              disabled={simulationState === "running"}
+            >
+              {simulationState === "running"
+                ? "Simulando no C6…"
+                : "Simular refinanciamento"}
+            </button>
+          </form>
+
+          <div
+            className={`c6-status ${simulationState}`}
+            role={simulationState === "error" ? "alert" : "status"}
+          >
+            <span>
+              {simulationState === "done"
+                ? "✓"
+                : simulationState === "error"
+                  ? "!"
+                  : "↻"}
+            </span>
+            <div>
+              <strong>
+                {simulationState === "running"
+                  ? "Simulação em andamento"
+                  : simulationState === "done"
+                    ? "Retorno recebido"
+                    : simulationState === "error"
+                      ? "Atenção necessária"
+                      : "Pronto para começar"}
+              </strong>
+              <p>{statusMessage}</p>
+            </div>
+          </div>
+        </section>
+
+        <aside className="c6-setup-card">
+          <span className="mini-label">PRIMEIRO ACESSO</span>
+          <h2>Conexão segura com o C6</h2>
+          <ol>
+            <li>
+              <span>1</span>
+              <p>
+                <strong>Instale o conector</strong>
+                Uma única vez no Chrome do operador.
+              </p>
+            </li>
+            <li>
+              <span>2</span>
+              <p>
+                <strong>Salve o acesso do C6</strong>
+                A senha permanece somente neste computador.
+              </p>
+            </li>
+            <li>
+              <span>3</span>
+              <p>
+                <strong>Confirme a permissão</strong>O perfil precisa exibir
+                Cadastro &gt; Proposta Consignado.
+              </p>
+            </li>
+          </ol>
+          <div className="c6-setup-actions">
+            <a href="/conector-c6-imperio.zip" download>
+              Baixar conector C6
+            </a>
+            <a
+              href="https://c6.c6consig.com.br/WebAutorizador/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Abrir portal manualmente ↗
+            </a>
+          </div>
+        </aside>
+      </div>
+
+      <section className="c6-results">
+        <div className="c6-results-heading">
+          <div>
+            <span className="mini-label">RESULTADO</span>
+            <h2>Condições disponíveis</h2>
+          </div>
+          <span>
+            {offers.length
+              ? `${offers.length} condição(ões)`
+              : "Aguardando simulação"}
+          </span>
+        </div>
+
+        {offers.length ? (
+          <div className="c6-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tabela</th>
+                  <th>Descrição da tabela</th>
+                  <th>Taxa a.m.</th>
+                  <th>Parcela</th>
+                  <th>Valor cliente</th>
+                  <th>Prazo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {offers.map((offer, index) => (
+                  <tr key={`${offer.table}-${index}`}>
+                    <td>
+                      <strong>{offer.table || "—"}</strong>
+                    </td>
+                    <td>{offer.description || "—"}</td>
+                    <td>{offer.monthlyRate || "—"}</td>
+                    <td>{offer.installment || "—"}</td>
+                    <td className="client-value">
+                      {offer.clientValue || "—"}
+                    </td>
+                    <td>{offer.term || "108"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="c6-empty-results">
+            <span>R$</span>
+            <div>
+              <strong>As ofertas aparecerão aqui</strong>
+              <p>
+                O retorno destacará tabela, descrição, taxa, parcela, valor
+                liberado ao cliente e prazo.
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <div className="c6-footer-note">
+        <span>i</span>
+        <p>
+          Esta ferramenta apenas simula. Ela não grava proposta nem contrata
+          empréstimo. Revise o retorno e a política vigente antes de orientar o
+          cliente.
+        </p>
+        <button onClick={onBack}>← Voltar ao atendimento</button>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const [view, setView] = useState<View>("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -1176,6 +1521,14 @@ export default function Home() {
             <span className="nav-icon">≡</span>
             Roteiros
             <span className="nav-count">{rulebooks.length}</span>
+          </button>
+          <button
+            className={view === "simulations" ? "active" : ""}
+            onClick={() => setView("simulations")}
+          >
+            <span className="nav-icon">R$</span>
+            Simulações
+            <span className="nav-count">C6</span>
           </button>
           <button
             className={view === "calculator" ? "active" : ""}
@@ -1884,6 +2237,11 @@ export default function Home() {
         </section>
       ) : view === "calculator" ? (
         <CalculatorView onBack={() => setView("chat")} />
+      ) : view === "simulations" ? (
+        <C6RefinView
+          defaultCpf={analysis?.client.cpf}
+          onBack={() => setView("chat")}
+        />
       ) : (
         <section className="workspace rules-workspace">
           <header className="workspace-header rules-header">

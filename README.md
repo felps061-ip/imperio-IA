@@ -44,6 +44,8 @@ Os tokens:
 - Consulta dos roteiros operacionais por banco.
 - Atualização de roteiros por PDF.
 - Chat direcionado a dúvidas de crédito consignado.
+- Área de simulações bancárias, iniciando pelo refinanciamento C6.
+- Conector local do Chrome que mantém a credencial bancária fora do site.
 - Calculadora do Cidadão integrada.
 - Interface responsiva para computador e celular.
 - Tela de acesso protegida por token.
@@ -122,6 +124,30 @@ Para estimar a taxa de um contrato INSS:
 O resultado é aproximado. O saldo oficial da portabilidade deve ser confirmado
 pela CIP.
 
+## Simulação de refinanciamento C6
+
+A aba **Simulações** inicia a automação do refinanciamento de carteira INSS no
+portal C6. O operador informa o CPF e recebe no Império IA:
+
+- tabela;
+- descrição da tabela;
+- taxa de juros mensal;
+- valor da parcela;
+- valor liberado ao cliente;
+- prazo.
+
+Para proteger o acesso bancário, a automação utiliza o
+**Conector C6 · Império IA**, disponível para download dentro da própria aba.
+O usuário e a senha do C6 ficam no armazenamento local da extensão do Chrome e
+não são enviados ao site nem incluídos no GitHub.
+
+O perfil utilizado no C6 precisa exibir
+**Cadastro > Proposta Consignado**. O conector interrompe o fluxo com uma
+mensagem clara quando essa permissão não está disponível.
+
+O conector automatiza somente a simulação. Ele não grava proposta e não conclui
+contratação.
+
 ## Privacidade
 
 - O PDF do extrato é processado localmente no navegador sempre que possível.
@@ -131,6 +157,7 @@ pela CIP.
   repositório.
 - O projeto não possui integração ativa com o Bevi Ajuda.
 - Tokens válidos são armazenados somente como hashes.
+- Credenciais do C6 não fazem parte do código nem das variáveis do site.
 - A chave utilizada para assinar a sessão fica nas variáveis protegidas da
   hospedagem.
 - A página de acesso limita tentativas repetidas no mesmo ponto de conexão.

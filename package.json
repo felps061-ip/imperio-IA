@@ -9,7 +9,7 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs tests/inss-parser.test.mjs tests/citizen-calculator.test.mjs tests/token-auth.test.mjs",
+    "test": "npm run build && node --test tests/rendered-html.test.mjs tests/inss-parser.test.mjs tests/citizen-calculator.test.mjs tests/c6-refin.test.mjs tests/token-auth.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "access:generate": "node scripts/generate-access-tokens.mjs",
     "db:generate": "drizzle-kit generate"

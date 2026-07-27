@@ -597,11 +597,11 @@ export default function Home() {
     <main className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">I</div>
-          <div>
-            <strong>Império IA</strong>
-            <span>Mesa consignado</span>
-          </div>
+          <img
+            className="brand-wordmark"
+            src="/imperio-wordmark.png"
+            alt="Império Promotora"
+          />
         </div>
 
         <button
@@ -676,6 +676,9 @@ export default function Home() {
               <h1>INSS · Portabilidade</h1>
             </div>
             <div className="header-actions">
+              <div className="header-brand" aria-hidden="true">
+                <img src="/imperio-signature.png" alt="" />
+              </div>
               <button className="soft-button" onClick={() => setView("rules")}>
                 Base de regras
               </button>
@@ -697,7 +700,9 @@ export default function Home() {
           <div className="chat-layout">
             <section className="conversation" aria-label="Conversa operacional">
               <div className="message assistant-message intro-message">
-                <div className="assistant-avatar">I</div>
+                <div className="assistant-avatar">
+                  <img src="/imperio-lion.png" alt="" />
+                </div>
                 <div className="message-body">
                   <div className="message-meta">
                     <strong>Império IA</strong>
@@ -1074,7 +1079,11 @@ export default function Home() {
                         : "assistant-avatar"
                     }
                   >
-                    {message.role === "user" ? "OP" : "I"}
+                    {message.role === "user" ? (
+                      "OP"
+                    ) : (
+                      <img src="/imperio-lion.png" alt="" />
+                    )}
                   </div>
                   <div className="message-body">
                     <div className="message-meta">
@@ -1090,7 +1099,9 @@ export default function Home() {
 
               {isReplying && (
                 <div className="message assistant-message">
-                  <div className="assistant-avatar">I</div>
+                  <div className="assistant-avatar">
+                    <img src="/imperio-lion.png" alt="" />
+                  </div>
                   <div className="typing" aria-label="Assistente digitando">
                     <i />
                     <i />
@@ -1304,15 +1315,20 @@ export default function Home() {
                 Cada banco mantém regras próprias, versão e histórico separados.
               </p>
             </div>
-            <button
-              className="primary-button"
-              onClick={() => {
-                setPendingBank("Novo roteiro");
-                ruleUploadRef.current?.click();
-              }}
-            >
-              Adicionar roteiro
-            </button>
+            <div className="header-actions">
+              <div className="header-brand" aria-hidden="true">
+                <img src="/imperio-signature.png" alt="" />
+              </div>
+              <button
+                className="primary-button"
+                onClick={() => {
+                  setPendingBank("Novo roteiro");
+                  ruleUploadRef.current?.click();
+                }}
+              >
+                Adicionar roteiro
+              </button>
+            </div>
           </header>
 
           <input

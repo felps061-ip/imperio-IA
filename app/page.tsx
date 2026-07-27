@@ -1,6 +1,13 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
+import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+
+import {
+  analyzeInssExtract,
+  formatMoney,
+  maskDocument,
+} from "@/lib/inss-extrato.mjs";
 
 type View = "chat" | "rules";
 type ChatMessage = {
@@ -9,6 +16,68 @@ type ChatMessage = {
   text: string;
 };
 type UploadState = "idle" | "reading" | "ready" | "error";
+type OfferStatus = "eligible" | "review" | "blocked";
+type BankOffer = {
+  bank: string;
+  status: OfferStatus;
+  reason: string;
+  mode: string;
+  version: string;
+  score: number;
+};
+type ContractAnalysis = {
+  bankCode: string;
+  bank: string;
+  registeredAt: string;
+  start: string;
+  end: string;
+  financed: number;
+  payoff: number;
+  installment: number;
+  approximateRate: number;
+  paid: number;
+  total: number;
+  remaining: number;
+  contractNumber: string;
+  refinanceAvailable: number;
+  portabilityAvailable: number;
+  calculatedRate: number;
+  offers: BankOffer[];
+  possible: BankOffer[];
+  review: BankOffer[];
+  blocked: BankOffer[];
+};
+type AnalysisResult = {
+  client: {
+    name: string;
+    benefit: string;
+    cpf: string;
+    birthDate: string;
+    speciesCode: string;
+    species: string;
+    ageYears: number;
+    ageMonths: number;
+    state: string;
+  };
+  banking: {
+    paymentMethod: string;
+    bankCode: string;
+    bank: string;
+  };
+  financial: {
+    benefitValue: number;
+    consignedValue: number;
+    availableMargin: number;
+  };
+  speciesStatus: {
+    code: string;
+    status: "consignable" | "non_consignable" | "unknown";
+    label: string;
+    reason: string;
+  };
+  contracts: ContractAnalysis[];
+  analyzedAt: string;
+};
 
 const rulebooks = [
   {
@@ -156,8 +225,90 @@ const rulebooks = [
   },
 ];
 
-function assistantReply(question: string) {
+function statusLabel(status: OfferStatus) {
+  if (status === "eligible") return "Possível";
+  if (status === "review") return "Revisar";
+  return "Não opera";
+}
+
+async function extractPdfText(file: File) {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+  const data = new Uint8Array(await file.arrayBuffer());
+  const pdf = await pdfjs.getDocument({ data }).promise;
+  const pageTexts: string[] = [];
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const content = await page.getTextContent();
+    let pageText = "";
+
+    for (const item of content.items) {
+      if (!("str" in item)) continue;
+      pageText += item.str;
+      pageText += item.hasEOL ? "\n" : " ";
+    }
+
+    pageTexts.push(pageText);
+  }
+
+  await pdf.destroy();
+  return pageTexts.join("\n");
+}
+
+function assistantReply(question: string, analysis: AnalysisResult | null) {
   const normalized = question.toLocaleLowerCase("pt-BR");
+  const mentionedBank = analysis
+    ? rulebooks
+        .filter((rulebook) => rulebook.status === "active")
+        .find((rulebook) =>
+          normalized.includes(rulebook.bank.toLocaleLowerCase("pt-BR")),
+        )
+    : undefined;
+
+  if (analysis && mentionedBank) {
+    const decisions = analysis.contracts.slice(0, 4).map((contract) => {
+      const decision = contract.offers.find(
+        (item) => item.bank === mentionedBank.bank,
+      );
+      return `${contract.bank} ${formatMoney(contract.installment)}: ${statusLabel(decision?.status ?? "review")} - ${decision?.reason ?? "exige revisão"}`;
+    });
+    return decisions.join(" | ");
+  }
+
+  if (analysis && normalized.includes("espécie")) {
+    return `A espécie ${analysis.speciesStatus.code || "não identificada"} está classificada como ${analysis.speciesStatus.label.toLocaleLowerCase("pt-BR")}. ${analysis.speciesStatus.reason} A aceitação final ainda varia conforme o roteiro de cada banco.`;
+  }
+
+  if (
+    analysis &&
+    (normalized.includes("onde") ||
+      normalized.includes("porta") ||
+      normalized.includes("opera"))
+  ) {
+    if (analysis.contracts.length === 1) {
+      const contract = analysis.contracts[0];
+      const banks = contract.possible.map((item) => item.bank).join(", ");
+      return `Para a parcela de ${formatMoney(contract.installment)} do ${contract.bank}, encontrei ${contract.possible.length} rotas possíveis pelo roteiro: ${banks}. Abra “Comparação completa” para ver também os bloqueios e seus motivos.`;
+    }
+
+    const withRoute = analysis.contracts.filter(
+      (contract) => contract.possible.length > 0,
+    ).length;
+    return `Analisei ${analysis.contracts.length} contratos e ${withRoute} têm pelo menos uma rota possível. Cada cartão mostra os destinos classificados e a justificativa por banco.`;
+  }
+
+  if (analysis && normalized.includes("taxa")) {
+    const examples = analysis.contracts
+      .slice(0, 3)
+      .map(
+        (contract) =>
+          `${contract.bank}: ${contract.calculatedRate.toFixed(2).replace(".", ",")}% a.m.`,
+      )
+      .join("; ");
+    return `Recalculei a taxa usando quitação, parcela e prazo restante. ${examples}`;
+  }
 
   if (
     normalized.includes("bancos") ||
@@ -177,10 +328,12 @@ function assistantReply(question: string) {
     return "A margem negativa varia por produto e banco. Nos novos roteiros, a Finanto informa que não opera; o iCred permite tratamento apenas em condições específicas de refinanciamento ou portabilidade; e o Daycoval prevê abatimento somente no refinanciamento. A decisão final ainda depende da operação e da versão vigente.";
   }
   if (normalized.includes("taxa")) {
-    return "Quando a leitura automática estiver conectada, a taxa será recalculada com parcela, saldo de quitação e parcelas restantes. A taxa aproximada impressa no extrato será mantida apenas como referência.";
+    return "A taxa é recalculada com parcela, saldo de quitação e parcelas restantes. A taxa aproximada impressa no extrato fica apenas como referência.";
   }
 
-  return "Posso explicar as regras dos 12 bancos INSS cadastrados — idade, espécie, prazo, saldo, parcelas pagas, margem e portabilidade. Para analisar um cliente, comece anexando o extrato em PDF.";
+  return analysis
+    ? "A análise já está pronta. Pergunte onde cada contrato pode ser portado, por que um banco bloqueou ou como a taxa foi calculada."
+    : "Posso explicar as regras dos 12 bancos INSS cadastrados. Para analisar um cliente automaticamente, anexe o extrato em PDF.";
 }
 
 function StatusPill({
@@ -201,6 +354,7 @@ export default function Home() {
   const [fileName, setFileName] = useState("");
   const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [uploadMessage, setUploadMessage] = useState("");
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [updatedBanks, setUpdatedBanks] = useState<string[]>([]);
   const [expandedRule, setExpandedRule] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
@@ -226,7 +380,7 @@ export default function Home() {
         {
           id: id + 1,
           role: "assistant",
-          text: assistantReply(cleanQuestion),
+          text: assistantReply(cleanQuestion, analysis),
         },
       ]);
       setIsReplying(false);
@@ -237,7 +391,7 @@ export default function Home() {
     setQuestion(text);
   }
 
-  function handleCaseFile(file?: File) {
+  async function handleCaseFile(file?: File) {
     if (!file) return;
     if (!file.name.toLocaleLowerCase("pt-BR").endsWith(".pdf")) {
       setUploadState("error");
@@ -251,15 +405,36 @@ export default function Home() {
     }
 
     setFileName(file.name);
+    setAnalysis(null);
+    setMessages([]);
     setUploadState("reading");
-    setUploadMessage("Preparando o documento no navegador…");
+    setUploadMessage("Lendo o extrato e identificando os contratos…");
 
-    window.setTimeout(() => {
+    try {
+      const text = await extractPdfText(file);
+      setUploadMessage("Comparando cada contrato com os 12 bancos…");
+      const result = analyzeInssExtract(text) as AnalysisResult;
+      setAnalysis(result);
       setUploadState("ready");
       setUploadMessage(
-        "PDF selecionado. A extração automática será conectada ao módulo de IA.",
+        `${result.contracts.length} contrato(s) analisado(s) automaticamente no navegador.`,
       );
-    }, 1100);
+      setMessages([
+        {
+          id: Date.now(),
+          role: "assistant",
+          text: `Análise concluída. Encontrei ${result.contracts.length} contrato(s) e comparei cada um com os 12 bancos INSS. As opções possíveis e os bloqueios estão detalhados abaixo.`,
+        },
+      ]);
+    } catch (error) {
+      setAnalysis(null);
+      setUploadState("error");
+      setUploadMessage(
+        error instanceof Error
+          ? error.message
+          : "Não consegui ler este PDF. Tente gerar um novo extrato INSS.",
+      );
+    }
   }
 
   function handleRuleFile(file?: File) {
@@ -289,6 +464,9 @@ export default function Home() {
             setMessages([]);
             setFileName("");
             setUploadState("idle");
+            setUploadMessage("");
+            setAnalysis(null);
+            if (uploadRef.current) uploadRef.current.value = "";
             setView("chat");
           }}
         >
@@ -303,7 +481,7 @@ export default function Home() {
           >
             <span className="nav-icon">◫</span>
             Atendimento
-            <span className="nav-count">0</span>
+            <span className="nav-count">{analysis ? 1 : 0}</span>
           </button>
           <button
             className={view === "rules" ? "active" : ""}
@@ -325,7 +503,9 @@ export default function Home() {
             </span>
           </button>
           <div className="recent-empty">
-            Nenhum atendimento salvo
+            {analysis
+              ? `${analysis.contracts.length} contrato(s) em análise`
+              : "Nenhum atendimento salvo"}
           </div>
         </div>
 
@@ -363,9 +543,9 @@ export default function Home() {
           </header>
 
           <div className="demo-banner">
-            <span>Base atualizada</span>
-            12 bancos INSS estão catalogados. A leitura automática de novos
-            extratos será conectada ao módulo de IA na etapa de produção.
+            <span>Leitura automática ativa</span>
+            Anexe o extrato: contratos, taxas e possibilidades de portabilidade
+            são calculados no próprio navegador.
           </div>
 
           <div className="chat-layout">
@@ -389,22 +569,25 @@ export default function Home() {
                 </div>
               </div>
 
+              <input
+                ref={uploadRef}
+                type="file"
+                accept=".pdf,application/pdf"
+                hidden
+                onChange={(event) => {
+                  void handleCaseFile(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+              />
               <button
                 className={`upload-card ${uploadState}`}
                 onClick={() => uploadRef.current?.click()}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => {
                   event.preventDefault();
-                  handleCaseFile(event.dataTransfer.files[0]);
+                  void handleCaseFile(event.dataTransfer.files[0]);
                 }}
               >
-                <input
-                  ref={uploadRef}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  hidden
-                  onChange={(event) => handleCaseFile(event.target.files?.[0])}
-                />
                 <span className="upload-icon">
                   {uploadState === "reading"
                     ? "…"
@@ -418,7 +601,7 @@ export default function Home() {
                   </strong>
                   <small>
                     {uploadMessage ||
-                      "PDF de até 15 MB · o arquivo não é enviado nesta prévia"}
+                      "PDF de até 15 MB · análise local, sem armazenar o arquivo"}
                   </small>
                 </span>
                 <span className="upload-action">
@@ -426,32 +609,298 @@ export default function Home() {
                 </span>
               </button>
 
-              <div className="empty-analysis">
-                <div className="empty-analysis-icon">⌁</div>
-                <span className="mini-label">NENHUM CLIENTE CARREGADO</span>
-                <h2>O atendimento começa com um extrato</h2>
-                <p>
-                  Assim que a leitura automática for conectada, a análise seguirá
-                  três etapas rastreáveis:
-                </p>
-                <div className="empty-steps">
-                  <div>
-                    <span>1</span>
-                    <strong>Extrair</strong>
-                    <small>benefício, cliente e contratos</small>
+              {analysis ? (
+                <div className="automatic-analysis">
+                  <div className="analysis-complete">
+                    <span className="analysis-complete-icon">✓</span>
+                    <div>
+                      <span className="mini-label">ANÁLISE AUTOMÁTICA CONCLUÍDA</span>
+                      <h2>
+                        {analysis.contracts.length} contrato(s) comparado(s) com
+                        12 bancos
+                      </h2>
+                      <p>
+                        A classificação abaixo usa os critérios objetivos dos
+                        roteiros cadastrados.
+                      </p>
+                    </div>
+                    <span className="local-processing">Processado localmente</span>
                   </div>
-                  <div>
-                    <span>2</span>
-                    <strong>Calcular</strong>
-                    <small>taxa, prazo e saldo restante</small>
+
+                  <div className="analysis-summary">
+                    <div>
+                      <span className="metric-icon success">✓</span>
+                      <span>
+                        <strong>
+                          {
+                            analysis.contracts.filter(
+                              (contract) => contract.possible.length > 0,
+                            ).length
+                          }
+                        </strong>
+                        contratos com rota
+                      </span>
+                    </div>
+                    <div>
+                      <span className="metric-icon info">≡</span>
+                      <span>
+                        <strong>
+                          {analysis.contracts.reduce(
+                            (total, contract) =>
+                              total + contract.possible.length,
+                            0,
+                          )}
+                        </strong>
+                        possibilidades encontradas
+                      </span>
+                    </div>
+                    <div>
+                      <span className="metric-icon warning">!</span>
+                      <span>
+                        <strong>12</strong>
+                        roteiros consultados
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span>3</span>
-                    <strong>Comparar</strong>
-                    <small>cada parcela com os 12 bancos</small>
+
+                  <div className="client-analysis-card">
+                    <div>
+                      <span>Cliente</span>
+                      <strong>{analysis.client.name}</strong>
+                      <small>
+                        Benefício {maskDocument(analysis.client.benefit)} · CPF{" "}
+                        {maskDocument(analysis.client.cpf)}
+                      </small>
+                    </div>
+                    <div>
+                      <span>Benefício</span>
+                      <strong>
+                        {analysis.client.speciesCode} · {analysis.client.species}
+                      </strong>
+                      <StatusPill
+                        kind={
+                          analysis.speciesStatus.status === "consignable"
+                            ? "approved"
+                            : analysis.speciesStatus.status ===
+                                "non_consignable"
+                              ? "blocked"
+                              : "review"
+                        }
+                      >
+                        {analysis.speciesStatus.label}
+                      </StatusPill>
+                      <small>
+                        {analysis.client.ageYears} anos · nascimento{" "}
+                        {analysis.client.birthDate}
+                      </small>
+                    </div>
+                    <div>
+                      <span>Margem disponível</span>
+                      <strong
+                        className={
+                          analysis.financial.availableMargin < 0
+                            ? "negative-value"
+                            : "positive-value"
+                        }
+                      >
+                        {formatMoney(analysis.financial.availableMargin)}
+                      </strong>
+                      <small>
+                        Pagamento: {analysis.banking.bank || "não identificado"}
+                      </small>
+                    </div>
+                  </div>
+
+                  {analysis.speciesStatus.status !== "consignable" && (
+                    <div
+                      className={`species-alert ${analysis.speciesStatus.status}`}
+                    >
+                      <strong>
+                        Espécie {analysis.speciesStatus.code || "não identificada"}:{" "}
+                        {analysis.speciesStatus.label}
+                      </strong>
+                      <span>{analysis.speciesStatus.reason}</span>
+                    </div>
+                  )}
+
+                  <div className="analyzed-contracts">
+                    {analysis.contracts.map((contract, index) => (
+                      <article
+                        className="contract-analysis-card"
+                        key={`${contract.bankCode}-${contract.contractNumber}`}
+                      >
+                        <div className="contract-analysis-heading">
+                          <div className="contract-number">
+                            <span>{index + 1}</span>
+                            <div>
+                              <small>CONTRATO DE ORIGEM</small>
+                              <h3>
+                                {contract.bankCode} · {contract.bank}
+                              </h3>
+                              <p>Nº {contract.contractNumber}</p>
+                            </div>
+                          </div>
+                          <StatusPill
+                            kind={
+                              contract.possible.length ? "approved" : "review"
+                            }
+                          >
+                            {contract.possible.length
+                              ? `${contract.possible.length} possibilidade(s)`
+                              : "Requer revisão"}
+                          </StatusPill>
+                        </div>
+
+                        <div className="contract-metrics">
+                          <div>
+                            <span>Parcela</span>
+                            <strong>{formatMoney(contract.installment)}</strong>
+                          </div>
+                          <div>
+                            <span>Quitação</span>
+                            <strong>{formatMoney(contract.payoff)}</strong>
+                          </div>
+                          <div>
+                            <span>Prazo</span>
+                            <strong>
+                              {String(contract.paid).padStart(2, "0")}/
+                              {contract.total}
+                            </strong>
+                            <small>{contract.remaining} restantes</small>
+                          </div>
+                          <div>
+                            <span>Taxa calculada</span>
+                            <strong>
+                              {contract.calculatedRate
+                                .toFixed(2)
+                                .replace(".", ",")}
+                              % a.m.
+                            </strong>
+                            <small>
+                              extrato:{" "}
+                              {contract.approximateRate
+                                .toFixed(2)
+                                .replace(".", ",")}
+                              %
+                            </small>
+                          </div>
+                        </div>
+
+                        <div className="best-routes">
+                          <div className="best-routes-heading">
+                            <div>
+                              <span className="mini-label">
+                                DESTINOS POSSÍVEIS PELO ROTEIRO
+                              </span>
+                              <h4>
+                                {contract.possible.length
+                                  ? contract.possible
+                                      .map((item) => item.bank)
+                                      .join(" · ")
+                                  : "Nenhuma rota automática encontrada"}
+                              </h4>
+                            </div>
+                            <span>
+                              {contract.possible.length
+                                ? "seguir para simulação"
+                                : "avaliar manualmente"}
+                            </span>
+                          </div>
+
+                          {contract.possible.length > 0 && (
+                            <div className="route-reasons">
+                              {contract.possible.slice(0, 3).map((item) => (
+                                <div key={item.bank}>
+                                  <span className="route-check">✓</span>
+                                  <div>
+                                    <strong>
+                                      {item.bank} · {item.mode}
+                                    </strong>
+                                    <small>{item.reason}</small>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <details className="bank-comparison">
+                          <summary>
+                            <span>Comparação completa com os 12 bancos</span>
+                            <small>
+                              {contract.possible.length} possíveis ·{" "}
+                              {contract.review.length} revisar ·{" "}
+                              {contract.blocked.length} bloqueados
+                            </small>
+                          </summary>
+                          <div className="comparison-list">
+                            {contract.offers.map((item) => (
+                              <div
+                                className={`comparison-row ${item.status}`}
+                                key={item.bank}
+                              >
+                                <span className="comparison-status" />
+                                <span>
+                                  <strong>{item.bank}</strong>
+                                  <small>
+                                    {item.mode} · roteiro {item.version}
+                                  </small>
+                                </span>
+                                <span className="comparison-reason">
+                                  {item.reason}
+                                </span>
+                                <StatusPill
+                                  kind={
+                                    item.status === "eligible"
+                                      ? "approved"
+                                      : item.status
+                                  }
+                                >
+                                  {statusLabel(item.status)}
+                                </StatusPill>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      </article>
+                    ))}
+                  </div>
+
+                  <div className="source-note">
+                    <span>i</span>
+                    Resultado de pré-triagem. A condição comercial, o saldo
+                    retornado pela CIP e a aprovação final do banco continuam
+                    obrigatórios.
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="empty-analysis">
+                  <div className="empty-analysis-icon">⌁</div>
+                  <span className="mini-label">PRONTO PARA ANALISAR</span>
+                  <h2>O atendimento começa com um extrato</h2>
+                  <p>
+                    Selecione o PDF e aguarde: a tela será preenchida
+                    automaticamente, sem precisar perguntar ao chat.
+                  </p>
+                  <div className="empty-steps">
+                    <div>
+                      <span>1</span>
+                      <strong>Extrair</strong>
+                      <small>benefício, cliente e contratos</small>
+                    </div>
+                    <div>
+                      <span>2</span>
+                      <strong>Calcular</strong>
+                      <small>taxa, prazo e saldo restante</small>
+                    </div>
+                    <div>
+                      <span>3</span>
+                      <strong>Comparar</strong>
+                      <small>cada parcela com os 12 bancos</small>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {messages.map((message) => (
                 <div
@@ -501,16 +950,63 @@ export default function Home() {
                 <button aria-label="Fechar contexto">×</button>
               </div>
 
-              <div className="context-empty-card">
-                <span>＋</span>
-                <div>
-                  <strong>Nenhum extrato carregado</strong>
-                  <small>
-                    Os dados cadastrais e financeiros aparecerão aqui depois da
-                    leitura.
-                  </small>
+              {analysis ? (
+                <div className="client-card">
+                  <div className="client-top">
+                    <div className="client-avatar">
+                      {analysis.client.name
+                        .split(" ")
+                        .slice(0, 2)
+                        .map((part) => part[0])
+                        .join("")}
+                    </div>
+                    <div>
+                      <strong>{analysis.client.name}</strong>
+                      <span>
+                        Benefício {maskDocument(analysis.client.benefit)}
+                      </span>
+                    </div>
+                    <StatusPill kind="approved">INSS</StatusPill>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>Espécie</dt>
+                      <dd>{analysis.client.speciesCode}</dd>
+                    </div>
+                    <div>
+                      <dt>Idade</dt>
+                      <dd>{analysis.client.ageYears} anos</dd>
+                    </div>
+                    <div>
+                      <dt>UF</dt>
+                      <dd>{analysis.client.state || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt>Margem</dt>
+                      <dd
+                        className={
+                          analysis.financial.availableMargin < 0
+                            ? "negative"
+                            : ""
+                        }
+                      >
+                        {formatMoney(analysis.financial.availableMargin)}
+                      </dd>
+                    </div>
+                  </dl>
                 </div>
-              </div>
+              ) : (
+                <div className="context-empty-card">
+                  <span>＋</span>
+                  <div>
+                    <strong>Nenhum extrato carregado</strong>
+                    <small>
+                      Os dados cadastrais e financeiros aparecerão aqui depois
+                      da leitura.
+                    </small>
+                  </div>
+                </div>
+              )}
 
               <div className="context-section">
                 <div className="context-title">
@@ -542,19 +1038,23 @@ export default function Home() {
                 <div className="extraction-list">
                   <div>
                     <span>Dados cadastrais</span>
-                    <b>Aguardando</b>
+                    <b>{analysis ? "Identificados" : "Aguardando"}</b>
                   </div>
                   <div>
                     <span>Dados bancários</span>
-                    <b>Aguardando</b>
+                    <b>{analysis ? "Identificados" : "Aguardando"}</b>
                   </div>
                   <div>
                     <span>Dados financeiros</span>
-                    <b>Aguardando</b>
+                    <b>{analysis ? "Identificados" : "Aguardando"}</b>
                   </div>
                   <div>
                     <span>Contratos</span>
-                    <b>Aguardando</b>
+                    <b>
+                      {analysis
+                        ? `${analysis.contracts.length} linha(s)`
+                        : "Aguardando"}
+                    </b>
                   </div>
                 </div>
               </div>
@@ -563,14 +1063,42 @@ export default function Home() {
 
           <footer className="composer-wrap">
             <div className="prompt-chips">
-              <button onClick={() => askShortcut("Quais bancos estão cadastrados?")}>
-                Quais bancos estão cadastrados?
+              <button
+                onClick={() =>
+                  askShortcut(
+                    analysis
+                      ? "Onde cada contrato pode ser portado?"
+                      : "Quais bancos estão cadastrados?",
+                  )
+                }
+              >
+                {analysis
+                  ? "Onde cada contrato pode ser portado?"
+                  : "Quais bancos estão cadastrados?"}
               </button>
-              <button onClick={() => askShortcut("Quem opera margem negativa?")}>
-                Quem opera margem negativa?
+              <button
+                onClick={() =>
+                  askShortcut(
+                    analysis
+                      ? "Como a taxa foi calculada?"
+                      : "Quem opera margem negativa?",
+                  )
+                }
+              >
+                {analysis ? "Como calculou a taxa?" : "Quem opera margem negativa?"}
               </button>
-              <button onClick={() => askShortcut("Quais roteiros foram adicionados?")}>
-                Quais roteiros foram adicionados?
+              <button
+                onClick={() =>
+                  askShortcut(
+                    analysis
+                      ? "Por que a Facta não opera?"
+                      : "Quais roteiros foram adicionados?",
+                  )
+                }
+              >
+                {analysis
+                  ? "Por que a Facta não opera?"
+                  : "Quais roteiros foram adicionados?"}
               </button>
             </div>
             <form className="composer" onSubmit={submitQuestion}>
@@ -586,7 +1114,11 @@ export default function Home() {
                 aria-label="Pergunta operacional"
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
-                placeholder="Pergunte sobre as regras INSS…"
+                placeholder={
+                  analysis
+                    ? "Pergunte sobre esta análise…"
+                    : "Pergunte sobre as regras INSS…"
+                }
               />
               <span className="scope-label">INSS</span>
               <button

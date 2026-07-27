@@ -619,6 +619,414 @@ button {
   font-size: 7px;
 }
 
+.automatic-analysis {
+  width: calc(100% - 44px);
+  margin: 4px 0 86px 44px;
+}
+
+.analysis-complete {
+  padding: 16px;
+  border: 1px solid #cfe3d9;
+  border-radius: 13px;
+  background:
+    linear-gradient(120deg, rgba(232, 247, 240, 0.96), rgba(255, 255, 255, 0.94)),
+    #fff;
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  gap: 11px;
+  align-items: center;
+}
+
+.analysis-complete-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #dff3e9;
+  color: var(--green);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.analysis-complete h2 {
+  margin: 3px 0 2px;
+  font-family: var(--font-source-serif), Georgia, serif;
+  font-size: 17px;
+}
+
+.analysis-complete p {
+  margin: 0;
+  color: #738078;
+  font-size: 8px;
+}
+
+.local-processing {
+  padding: 5px 8px;
+  border: 1px solid #cce1d7;
+  border-radius: 999px;
+  color: #51806c;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 7px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.client-analysis-card {
+  margin: 13px 0;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 1.25fr 1.25fr 0.9fr;
+  gap: 0;
+}
+
+.client-analysis-card > div {
+  min-width: 0;
+  padding: 2px 14px;
+  border-left: 1px solid #ececef;
+  display: flex;
+  flex-direction: column;
+}
+
+.client-analysis-card > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.client-analysis-card > div:last-child {
+  padding-right: 0;
+}
+
+.client-analysis-card span {
+  color: #9a9faa;
+  font-size: 7px;
+}
+
+.client-analysis-card strong {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #3f4656;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.client-analysis-card small {
+  margin-top: 3px;
+  color: #858b98;
+  font-size: 7px;
+}
+
+.client-analysis-card .positive-value {
+  color: var(--green);
+}
+
+.client-analysis-card .negative-value {
+  color: var(--red);
+}
+
+.client-analysis-card .status-pill {
+  align-self: flex-start;
+  margin-top: 5px;
+  color: inherit;
+  font-size: 7px;
+}
+
+.species-alert {
+  margin: -3px 0 13px;
+  padding: 10px 12px;
+  border: 1px solid #f1d697;
+  border-radius: 10px;
+  background: #fffaf0;
+  color: #7a6125;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 8px;
+}
+
+.species-alert strong {
+  white-space: nowrap;
+}
+
+.species-alert.non_consignable {
+  border-color: #efc6c6;
+  background: #fff5f5;
+  color: #9b4545;
+}
+
+.analyzed-contracts {
+  display: grid;
+  gap: 13px;
+}
+
+.contract-analysis-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(29, 38, 57, 0.045);
+  overflow: hidden;
+}
+
+.contract-analysis-heading {
+  padding: 14px 15px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.contract-number {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.contract-number > span {
+  flex: 0 0 auto;
+  width: 29px;
+  height: 29px;
+  border-radius: 9px;
+  background: #edf0ff;
+  color: var(--blue);
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.contract-number > div {
+  min-width: 0;
+}
+
+.contract-number small {
+  color: #9ba0aa;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.contract-number h3 {
+  margin: 2px 0 0;
+  font-family: var(--font-source-serif), Georgia, serif;
+  font-size: 15px;
+}
+
+.contract-number p {
+  margin: 2px 0 0;
+  color: #9297a2;
+  font-size: 7px;
+}
+
+.contract-metrics {
+  border-top: 1px solid #ececef;
+  border-bottom: 1px solid #ececef;
+  background: #fafaf9;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.contract-metrics > div {
+  min-height: 57px;
+  padding: 10px 13px;
+  border-left: 1px solid #ececef;
+  display: flex;
+  flex-direction: column;
+}
+
+.contract-metrics > div:first-child {
+  border-left: 0;
+}
+
+.contract-metrics span {
+  color: #9b9faa;
+  font-size: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.contract-metrics strong {
+  margin-top: 3px;
+  color: #404758;
+  font-size: 10px;
+}
+
+.contract-metrics small {
+  margin-top: 2px;
+  color: #8e94a0;
+  font-size: 6px;
+}
+
+.best-routes {
+  margin: 13px 15px;
+  padding: 13px;
+  border: 1px solid #d8e9e0;
+  border-radius: 11px;
+  background:
+    linear-gradient(120deg, rgba(234, 248, 241, 0.88), rgba(255, 255, 255, 0.9)),
+    #fff;
+}
+
+.best-routes-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.best-routes-heading h4 {
+  margin: 3px 0 0;
+  font-family: var(--font-source-serif), Georgia, serif;
+  font-size: 14px;
+}
+
+.best-routes-heading > span {
+  color: var(--green);
+  font-size: 7px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.route-reasons {
+  margin-top: 11px;
+  display: grid;
+  gap: 7px;
+}
+
+.route-reasons > div {
+  display: grid;
+  grid-template-columns: 21px 1fr;
+  gap: 7px;
+  align-items: start;
+}
+
+.route-check {
+  width: 21px;
+  height: 21px;
+  border-radius: 7px;
+  background: #dff3e9;
+  color: var(--green);
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.route-reasons > div > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.route-reasons strong {
+  color: #486256;
+  font-size: 8px;
+}
+
+.route-reasons small {
+  margin-top: 2px;
+  color: #758079;
+  font-size: 7px;
+  line-height: 1.4;
+}
+
+.bank-comparison {
+  border-top: 1px solid #ececef;
+}
+
+.bank-comparison summary {
+  min-height: 43px;
+  padding: 0 15px;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #5f6777;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.bank-comparison summary::-webkit-details-marker {
+  display: none;
+}
+
+.bank-comparison summary::after {
+  content: "⌄";
+  color: #9298a4;
+  font-size: 12px;
+}
+
+.bank-comparison[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.bank-comparison summary small {
+  margin-left: auto;
+  color: #959aa5;
+  font-size: 7px;
+  font-weight: 600;
+}
+
+.comparison-list {
+  border-top: 1px solid #ececef;
+}
+
+.comparison-row {
+  min-height: 49px;
+  padding: 8px 14px;
+  display: grid;
+  grid-template-columns: 8px minmax(90px, 0.72fr) minmax(160px, 1.6fr) auto;
+  gap: 9px;
+  align-items: center;
+  border-top: 1px solid #f0f0f1;
+}
+
+.comparison-row:first-child {
+  border-top: 0;
+}
+
+.comparison-row > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+}
+
+.comparison-row strong {
+  color: #454c5d;
+  font-size: 8px;
+}
+
+.comparison-row small {
+  margin-top: 2px;
+  color: #9298a4;
+  font-size: 6px;
+}
+
+.comparison-status {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+
+.comparison-row.eligible .comparison-status {
+  background: var(--green);
+}
+
+.comparison-row.blocked .comparison-status {
+  background: var(--red);
+}
+
+.comparison-reason {
+  color: #747b89;
+  font-size: 7px;
+  line-height: 1.45;
+}
+
 .case-divider {
   display: flex;
   align-items: center;
@@ -1708,7 +2116,8 @@ button {
   }
 
   .upload-card,
-  .empty-analysis {
+  .empty-analysis,
+  .automatic-analysis {
     width: 100%;
     margin-left: 0;
   }
@@ -1719,6 +2128,59 @@ button {
 
   .empty-steps {
     grid-template-columns: 1fr;
+  }
+
+  .analysis-complete {
+    grid-template-columns: 34px 1fr;
+  }
+
+  .local-processing {
+    display: none;
+  }
+
+  .client-analysis-card {
+    grid-template-columns: 1fr;
+  }
+
+  .client-analysis-card > div {
+    padding: 10px 0;
+    border-top: 1px solid #ececef;
+    border-left: 0;
+  }
+
+  .client-analysis-card > div:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .client-analysis-card > div:last-child {
+    padding-bottom: 0;
+  }
+
+  .contract-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .contract-metrics > div:nth-child(3) {
+    border-left: 0;
+    border-top: 1px solid #ececef;
+  }
+
+  .contract-metrics > div:nth-child(4) {
+    border-top: 1px solid #ececef;
+  }
+
+  .best-routes-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .comparison-row {
+    grid-template-columns: 8px 1fr auto;
+  }
+
+  .comparison-reason {
+    grid-column: 2 / -1;
   }
 
   .analysis-summary {

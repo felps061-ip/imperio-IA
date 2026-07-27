@@ -70,6 +70,8 @@ test("keeps the real client case and source PDFs out of the app", async () => {
   assert.match(page, /bank: "Total Cash"/);
   assert.match(page, /extractPdfText/);
   assert.match(page, /analyzeInssExtract/);
+  assert.match(page, /loadingTask\.destroy\(\)/);
+  assert.doesNotMatch(page, /pdf\.destroy\(\)/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.doesNotMatch(page, /const contracts|Cliente anonimizado|Caso demonstrativo/);
   assert.doesNotMatch(page, /Benefício •|Agibank|Cobuccio/);

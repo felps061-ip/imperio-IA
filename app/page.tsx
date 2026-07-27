@@ -321,24 +321,28 @@ async function extractPdfText(file: File) {
   pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
   const data = new Uint8Array(await file.arrayBuffer());
-  const pdf = await pdfjs.getDocument({ data }).promise;
+  const loadingTask = pdfjs.getDocument({ data });
+  const pdf = await loadingTask.promise;
   const pageTexts: string[] = [];
 
-  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-    const page = await pdf.getPage(pageNumber);
-    const content = await page.getTextContent();
-    let pageText = "";
+  try {
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const content = await page.getTextContent();
+      let pageText = "";
 
-    for (const item of content.items) {
-      if (!("str" in item)) continue;
-      pageText += item.str;
-      pageText += item.hasEOL ? "\n" : " ";
+      for (const item of content.items) {
+        if (!("str" in item)) continue;
+        pageText += item.str;
+        pageText += item.hasEOL ? "\n" : " ";
+      }
+
+      pageTexts.push(pageText);
     }
-
-    pageTexts.push(pageText);
+  } finally {
+    await loadingTask.destroy();
   }
 
-  await pdf.destroy();
   return pageTexts.join("\n");
 }
 

@@ -35,6 +35,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description,
+    icons: {
+      icon: [{ url: "/imperio-favicon.png", type: "image/png" }],
+      shortcut: "/imperio-favicon.png",
+      apple: "/imperio-favicon.png",
+    },
     openGraph: {
       title,
       description,

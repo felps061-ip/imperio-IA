@@ -147,10 +147,10 @@ mais de uma parcela, o sistema envia número do contrato e valor da parcela para
 selecionar a linha correta no portal.
 
 O perfil utilizado no C6 precisa exibir
-**Cadastro > Proposta Consignado**. A credencial deve ser exclusiva da
-integração: se o mesmo usuário estiver conectado em outra estação, o sistema
-interrompe a consulta sem derrubar a sessão existente e apresenta uma mensagem
-clara.
+**Cadastro > Proposta Consignado**. Se o mesmo usuário estiver conectado em
+outra estação, o sistema confirma automaticamente o encerramento da sessão
+anterior, entra novamente e continua a simulação. Essa recuperação é tentada
+uma única vez por consulta.
 
 A integração automatiza somente a simulação. Ela não grava proposta e não
 conclui contratação.
@@ -246,8 +246,9 @@ C6_CONSIG_USER=usuario_exclusivo_da_integracao
 C6_CONSIG_PASSWORD=senha_protegida_da_integracao
 ```
 
-Em produção, ambas devem ser cadastradas como variáveis secretas. Não use esse
-mesmo usuário em outra estação durante as consultas automáticas.
+Em produção, ambas devem ser cadastradas como variáveis secretas. Se o usuário
+estiver ativo em outra estação, essa sessão será encerrada automaticamente
+quando uma consulta for iniciada no Império IA.
 
 ## Estrutura principal
 
@@ -308,7 +309,7 @@ A suíte atual verifica:
 - restrições geográficas;
 - priorização da portabilidade com refinanciamento;
 - fluxo completo da simulação C6 com respostas controladas;
-- bloqueio seguro quando o usuário C6 já está ativo em outra estação;
+- encerramento controlado da sessão C6 ativa em outra estação;
 - cálculos de meses, taxa, prestação e valor financiado;
 - validação da privacidade na interface;
 - renderização da aplicação.

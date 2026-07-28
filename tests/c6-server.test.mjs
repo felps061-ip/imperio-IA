@@ -193,7 +193,7 @@ test("executa o fluxo WebForms completo e retorna as ofertas", async () => {
   assert.doesNotMatch(portal.calls[11].body, /ctl00%24contrato1=on/);
 });
 
-test("não força a desconexão de outra sessão do C6", async () => {
+test("força a desconexão de outra sessão do C6 e continua o login", async () => {
   const portal = fakePortal([
     page(`
       <input name="EUsuario$CAMPO" id="EUsuario_CAMPO" />
@@ -204,6 +204,70 @@ test("não força a desconexão de outra sessão do C6", async () => {
       <a id="LKEntrarForcado" href="javascript:__doPostBack('LKEntrarForcado','')">
         Continuar
       </a>
+    `),
+    page("<p>Sessão anterior encerrada.</p>"),
+  ]);
+
+  await assert.rejects(
+    simulateC6Refinancing(
+      {
+        cpf: "52998224725",
+        user: "usuario_teste",
+        password: "senha_teste",
+      },
+      { fetchImplementation: portal.fetchImplementation },
+    ),
+    (error) =>
+      error instanceof C6SimulationError && error.code === "C6_NO_PERMISSION",
+  );
+  assert.equal(portal.calls.length, 3);
+  assert.match(portal.calls[2].body, /__EVENTTARGET=LKEntrarForcado/);
+});
+
+test("não repete indefinidamente a desconexão de outra sessão do C6", async () => {
+  const busyPage = page(`
+    <p>O usuário do C6 já está conectado em outra estação.</p>
+    <a
+      id="LKEntrarForcado"
+      href="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;LKEntrarForcado&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, true))"
+    >
+      Continuar
+    </a>
+  `);
+  const portal = fakePortal([
+    page(`
+      <input name="EUsuario$CAMPO" id="EUsuario_CAMPO" />
+      <input name="ESenha$CAMPO" id="ESenha_CAMPO" />
+    `),
+    busyPage,
+    busyPage,
+  ]);
+
+  await assert.rejects(
+    simulateC6Refinancing(
+      {
+        cpf: "52998224725",
+        user: "usuario_teste",
+        password: "senha_teste",
+      },
+      { fetchImplementation: portal.fetchImplementation },
+    ),
+    (error) =>
+      error instanceof C6SimulationError && error.code === "C6_SESSION_BUSY",
+  );
+  assert.equal(portal.calls.length, 3);
+  assert.match(portal.calls[2].body, /__EVENTTARGET=LKEntrarForcado/);
+});
+
+test("informa quando o C6 não oferece o comando para encerrar a outra sessão", async () => {
+  const portal = fakePortal([
+    page(`
+      <input name="EUsuario$CAMPO" id="EUsuario_CAMPO" />
+      <input name="ESenha$CAMPO" id="ESenha_CAMPO" />
+    `),
+    page(`
+      <p>O usuário do C6 já está conectado em outra estação.</p>
+      <span id="LKEntrarForcado">Continuar</span>
     `),
   ]);
 

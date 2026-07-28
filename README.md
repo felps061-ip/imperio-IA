@@ -188,6 +188,18 @@ cd imperio-IA
 npm install
 ```
 
+Se o projeto já estiver baixado neste computador, abra o PowerShell e entre
+diretamente na pasta:
+
+```powershell
+cd "C:\Users\imper\OneDrive\Documentos\imperio-IA"
+npm install
+npm run dev
+```
+
+Os comandos precisam ser executados nessa pasta, onde está o arquivo
+`package.json`. Depois, abra no navegador o endereço exibido pelo terminal.
+
 Inicie o ambiente local:
 
 ```bash

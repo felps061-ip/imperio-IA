@@ -139,8 +139,11 @@ segundo plano e apresenta no Império IA:
 - prazo.
 
 Não é necessário instalar extensão, abrir outra aba ou digitar novamente o CPF.
-O acesso bancário fica somente nas variáveis secretas do servidor e nunca é
-enviado ao navegador nem incluído no GitHub.
+Cada operador informa o próprio usuário e senha do C6 dentro da aba de
+simulações. A credencial é criptografada pelo servidor e devolvida em um cookie
+HttpOnly vinculado à sessão do Império IA e inacessível ao JavaScript. Por
+padrão, o acesso dura somente a sessão do navegador; o operador pode escolher
+mantê-lo por até sete dias naquele computador.
 
 Cada contrato de origem C6 também exibe o botão **Simular no C6**. Quando há
 mais de uma parcela, o sistema envia número do contrato e valor da parcela para
@@ -166,8 +169,8 @@ conclui contratação.
   repositório.
 - O projeto não possui integração ativa com o Bevi Ajuda.
 - Tokens válidos são armazenados somente como hashes.
-- Credenciais do C6 não fazem parte do código e ficam apenas nas variáveis
-  secretas da hospedagem.
+- Credenciais do C6 não fazem parte do código, do PDF ou do GitHub. Elas ficam
+  criptografadas em cookie HttpOnly no navegador de cada operador.
 - A chave utilizada para assinar a sessão fica nas variáveis protegidas da
   hospedagem.
 - A página de acesso limita tentativas repetidas no mesmo ponto de conexão.
@@ -239,16 +242,11 @@ Esses arquivos são ignorados pelo Git e nunca devem ser enviados ao GitHub. Ao
 trocar a lista de tokens, as variáveis protegidas da hospedagem também precisam
 ser atualizadas.
 
-Para habilitar a simulação automática do C6, configure também:
-
-```dotenv
-C6_CONSIG_USER=usuario_exclusivo_da_integracao
-C6_CONSIG_PASSWORD=senha_protegida_da_integracao
-```
-
-Em produção, ambas devem ser cadastradas como variáveis secretas. Se o usuário
-estiver ativo em outra estação, essa sessão será encerrada automaticamente
-quando uma consulta for iniciada no Império IA.
+O segredo `IMPERIO_ACCESS_COOKIE_SECRET` também protege, com chave derivada
+separada, os cookies criptografados de acesso ao C6. Usuário e senha são
+informados individualmente pelo operador e não são configurados na hospedagem.
+Se o usuário estiver ativo em outra estação, essa sessão será encerrada
+automaticamente quando uma consulta for iniciada no Império IA.
 
 ## Estrutura principal
 

@@ -285,3 +285,27 @@ test("informa quando o C6 não oferece o comando para encerrar a outra sessão",
   );
   assert.equal(portal.calls.length, 2);
 });
+
+test("identifica usuário ou senha inválidos no login do C6", async () => {
+  const loginPage = page(`
+    <input name="EUsuario$CAMPO" id="EUsuario_CAMPO" />
+    <input name="ESenha$CAMPO" id="ESenha_CAMPO" />
+    <p>Usuário ou senha inválidos.</p>
+  `);
+  const portal = fakePortal([loginPage, loginPage]);
+
+  await assert.rejects(
+    simulateC6Refinancing(
+      {
+        cpf: "52998224725",
+        user: "usuario_teste",
+        password: "senha_incorreta",
+      },
+      { fetchImplementation: portal.fetchImplementation },
+    ),
+    (error) =>
+      error instanceof C6SimulationError &&
+      error.code === "C6_INVALID_CREDENTIALS",
+  );
+  assert.equal(portal.calls.length, 2);
+});

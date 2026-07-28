@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 
 import {
@@ -98,6 +98,12 @@ type C6Offer = {
 };
 
 type C6SimulationState = "idle" | "running" | "done" | "error";
+type C6CredentialState =
+  | "checking"
+  | "disconnected"
+  | "saving"
+  | "connected"
+  | "error";
 
 function isC6OwnContract(contract: ContractAnalysis) {
   return (
@@ -1395,6 +1401,11 @@ function AutomaticC6RefinView({
   state,
   message,
   offers,
+  credentialState,
+  credentialUser,
+  credentialMessage,
+  onConnect,
+  onDisconnect,
   onRun,
   onSelectExtract,
   onBack,
@@ -1404,14 +1415,33 @@ function AutomaticC6RefinView({
   state: C6SimulationState;
   message: string;
   offers: C6Offer[];
+  credentialState: C6CredentialState;
+  credentialUser: string;
+  credentialMessage: string;
+  onConnect: (
+    user: string,
+    password: string,
+    remember: boolean,
+  ) => Promise<void>;
+  onDisconnect: () => Promise<void>;
   onRun: (cpf: string, contract?: ContractAnalysis) => void;
   onSelectExtract: () => void;
   onBack: () => void;
 }) {
+  const [c6UserInput, setC6UserInput] = useState("");
+  const [c6PasswordInput, setC6PasswordInput] = useState("");
+  const [rememberC6, setRememberC6] = useState(false);
   const c6Contracts =
     analysis?.contracts.filter(isC6OwnContract) ?? [];
   const cpf = analysis?.client.cpf ?? "";
   const canSimulate = c6Contracts.length > 0 && validateCpf(cpf);
+  const c6Connected = credentialState === "connected";
+
+  async function submitC6Credentials(event: FormEvent) {
+    event.preventDefault();
+    await onConnect(c6UserInput, c6PasswordInput, rememberC6);
+    setC6PasswordInput("");
+  }
 
   const statusTitle =
     state === "running"
@@ -1438,9 +1468,15 @@ function AutomaticC6RefinView({
           </p>
         </div>
         <div className="header-actions">
-          <span className="connector-badge connected">
+          <span
+            className={`connector-badge ${c6Connected ? "connected" : ""}`}
+          >
             <i />
-            Automação protegida no servidor
+            {credentialState === "checking"
+              ? "Verificando acesso C6"
+              : c6Connected
+                ? `C6 conectado · ${credentialUser}`
+                : "Conecte seu acesso C6"}
           </span>
         </div>
       </header>
@@ -1525,35 +1561,95 @@ function AutomaticC6RefinView({
         </section>
 
         <aside className="c6-setup-card">
-          <span className="mini-label">FLUXO AUTOMÁTICO</span>
-          <h2>Do PDF ao resultado</h2>
-          <ol>
-            <li>
-              <span>1</span>
-              <p>
-                <strong>Leitura do extrato</strong>
-                O sistema identifica CPF e contratos C6.
-              </p>
-            </li>
-            <li>
-              <span>2</span>
-              <p>
-                <strong>Consulta protegida</strong>
-                O servidor acessa o portal e calcula o refinanciamento.
-              </p>
-            </li>
-            <li>
-              <span>3</span>
-              <p>
-                <strong>Ofertas na tela</strong>
-                Tabela, taxa, parcela, valor ao cliente e prazo são exibidos aqui.
-              </p>
-            </li>
-          </ol>
+          <span className="mini-label">ACESSO INDIVIDUAL C6</span>
+          <h2>Seu usuário do C6</h2>
+
+          {c6Connected ? (
+            <div className="c6-connected-account">
+              <span>✓</span>
+              <div>
+                <strong>Acesso protegido</strong>
+                <p>{credentialUser}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void onDisconnect()}
+                disabled={state === "running"}
+              >
+                Sair
+              </button>
+            </div>
+          ) : (
+            <form className="c6-login-form" onSubmit={submitC6Credentials}>
+              <label>
+                <span>Usuário C6</span>
+                <input
+                  type="text"
+                  value={c6UserInput}
+                  onChange={(event) => setC6UserInput(event.target.value)}
+                  autoComplete="username"
+                  spellCheck={false}
+                  placeholder="Digite seu usuário"
+                  required
+                />
+              </label>
+              <label>
+                <span>Senha C6</span>
+                <input
+                  type="password"
+                  value={c6PasswordInput}
+                  onChange={(event) => setC6PasswordInput(event.target.value)}
+                  autoComplete="current-password"
+                  placeholder="Digite sua senha"
+                  required
+                />
+              </label>
+              <label className="c6-remember">
+                <input
+                  type="checkbox"
+                  checked={rememberC6}
+                  onChange={(event) => setRememberC6(event.target.checked)}
+                />
+                <span>Lembrar neste computador por 7 dias</span>
+              </label>
+              <button
+                className="c6-login-submit"
+                disabled={
+                  credentialState === "saving" ||
+                  !c6UserInput.trim() ||
+                  !c6PasswordInput
+                }
+              >
+                {credentialState === "saving"
+                  ? "Protegendo acesso…"
+                  : "Conectar ao C6"}
+              </button>
+            </form>
+          )}
+
+          {credentialMessage ? (
+            <p
+              className={`c6-credential-message ${
+                credentialState === "error" ? "error" : ""
+              }`}
+              role={credentialState === "error" ? "alert" : "status"}
+            >
+              {credentialMessage}
+            </p>
+          ) : null}
+
           <p className="c6-security-note">
-            A credencial bancária não é enviada ao navegador nem aparece para o
-            operador.
+            A senha fica criptografada em um cookie HttpOnly deste navegador.
+            Ela não aparece na tela nem fica disponível para o JavaScript.
           </p>
+
+          <div className="c6-flow-summary">
+            <strong>Como funciona</strong>
+            <p>
+              Conecte seu acesso, envie o extrato e o sistema consulta o C6 em
+              segundo plano.
+            </p>
+          </div>
         </aside>
       </div>
 
@@ -1647,12 +1743,58 @@ export default function Home() {
   const [c6Offers, setC6Offers] = useState<C6Offer[]>([]);
   const [c6SelectedContract, setC6SelectedContract] =
     useState<ContractAnalysis | null>(null);
+  const [c6CredentialState, setC6CredentialState] =
+    useState<C6CredentialState>("checking");
+  const [c6CredentialUser, setC6CredentialUser] = useState("");
+  const [c6CredentialMessage, setC6CredentialMessage] = useState("");
   const [updatedBanks, setUpdatedBanks] = useState<string[]>([]);
   const [expandedRule, setExpandedRule] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const ruleUploadRef = useRef<HTMLInputElement>(null);
   const c6RequestRef = useRef(0);
   const [pendingBank, setPendingBank] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void fetch("/api/c6/session", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          connected?: boolean;
+          user?: string;
+          message?: string;
+        };
+        if (!response.ok || !payload.ok) {
+          throw new Error(
+            payload.message || "Não foi possível verificar o acesso C6.",
+          );
+        }
+        if (payload.connected) {
+          setC6CredentialState("connected");
+          setC6CredentialUser(payload.user || "Usuário protegido");
+          setC6CredentialMessage("Acesso C6 pronto para simular.");
+        } else {
+          setC6CredentialState("disconnected");
+          setC6CredentialUser("");
+          setC6CredentialMessage("");
+        }
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setC6CredentialState("error");
+        setC6CredentialMessage(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível verificar o acesso C6.",
+        );
+      });
+
+    return () => controller.abort();
+  }, []);
 
   function submitQuestion(event: FormEvent) {
     event.preventDefault();
@@ -1684,6 +1826,79 @@ export default function Home() {
     setQuestion(text);
   }
 
+  async function connectC6Credentials(
+    user: string,
+    password: string,
+    remember: boolean,
+  ) {
+    setC6CredentialState("saving");
+    setC6CredentialMessage("Protegendo seu acesso C6 neste navegador…");
+
+    try {
+      const response = await fetch("/api/c6/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user, password, remember }),
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        connected?: boolean;
+        user?: string;
+        message?: string;
+      };
+      if (!response.ok || !payload.ok || !payload.connected) {
+        throw new Error(payload.message || "Não foi possível salvar o acesso C6.");
+      }
+
+      setC6CredentialState("connected");
+      setC6CredentialUser(payload.user || "Usuário protegido");
+      setC6CredentialMessage(
+        payload.message || "Acesso C6 pronto para simular.",
+      );
+
+      const contract =
+        c6SelectedContract ?? analysis?.contracts.find(isC6OwnContract);
+      if (contract && analysis && validateCpf(analysis.client.cpf)) {
+        void runC6Simulation(analysis.client.cpf, contract);
+      }
+    } catch (error) {
+      setC6CredentialState("error");
+      setC6CredentialUser("");
+      setC6CredentialMessage(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível salvar o acesso C6.",
+      );
+    }
+  }
+
+  async function disconnectC6Credentials() {
+    try {
+      const response = await fetch("/api/c6/session", { method: "DELETE" });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: string;
+      };
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.message || "Não foi possível remover o acesso C6.");
+      }
+      c6RequestRef.current += 1;
+      setC6CredentialState("disconnected");
+      setC6CredentialUser("");
+      setC6CredentialMessage("Acesso C6 removido deste navegador.");
+      setC6State("idle");
+      setC6Message("");
+      setC6Offers([]);
+    } catch (error) {
+      setC6CredentialState("error");
+      setC6CredentialMessage(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível remover o acesso C6.",
+      );
+    }
+  }
+
   async function runC6Simulation(
     cpf: string,
     contract?: ContractAnalysis,
@@ -1711,10 +1926,25 @@ export default function Home() {
       });
       const payload = (await response.json()) as {
         ok?: boolean;
+        code?: string;
         message?: string;
         offers?: C6Offer[];
       };
       if (!response.ok || !payload.ok) {
+        if (
+          payload.code === "C6_LOGIN_REQUIRED" ||
+          payload.code === "C6_INVALID_CREDENTIALS"
+        ) {
+          setC6CredentialState(
+            payload.code === "C6_INVALID_CREDENTIALS"
+              ? "error"
+              : "disconnected",
+          );
+          setC6CredentialUser("");
+          setC6CredentialMessage(
+            payload.message || "Conecte novamente seu acesso C6.",
+          );
+        }
         throw new Error(
           payload.message || "O C6 não concluiu a simulação neste momento.",
         );
@@ -1787,7 +2017,15 @@ export default function Home() {
       if (firstC6Contract) {
         setView("simulations");
         if (validateCpf(result.client.cpf)) {
-          void runC6Simulation(result.client.cpf, firstC6Contract);
+          if (c6CredentialState === "connected") {
+            void runC6Simulation(result.client.cpf, firstC6Contract);
+          } else {
+            setC6SelectedContract(firstC6Contract);
+            setC6State("error");
+            setC6Message(
+              "Contrato C6 identificado. Conecte seu usuário no painel ao lado para iniciar a simulação.",
+            );
+          }
         } else {
           setC6State("error");
           setC6Message(
@@ -2617,6 +2855,11 @@ export default function Home() {
           state={c6State}
           message={c6Message}
           offers={c6Offers}
+          credentialState={c6CredentialState}
+          credentialUser={c6CredentialUser}
+          credentialMessage={c6CredentialMessage}
+          onConnect={connectC6Credentials}
+          onDisconnect={disconnectC6Credentials}
           onRun={(cpf, contract) => void runC6Simulation(cpf, contract)}
           onSelectExtract={() => uploadRef.current?.click()}
           onBack={() => setView("chat")}

@@ -11,14 +11,18 @@ import {
   C6SimulationError,
   simulateC6Refinancing,
 } from "../lib/c6-server.mjs";
+import {
+  decryptC6Credentials,
+  encryptC6Credentials,
+  maskC6User,
+  normalizeC6Credentials,
+} from "../lib/c6-credentials.mjs";
 
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   IMPERIO_ACCESS_COOKIE_SECRET?: string;
   IMPERIO_ACCESS_TOKEN_HASHES?: string;
-  C6_CONSIG_USER?: string;
-  C6_CONSIG_PASSWORD?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -35,6 +39,9 @@ interface ExecutionContext {
 
 const ACCESS_COOKIE_NAME = "imperio_access";
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
+const C6_CREDENTIAL_COOKIE_NAME = "imperio_c6_credentials";
+const C6_CREDENTIAL_SESSION_SECONDS = 60 * 60 * 12;
+const C6_CREDENTIAL_REMEMBER_SECONDS = 60 * 60 * 24 * 7;
 const PUBLIC_ASSET_PATHS = new Set([
   "/imperio-favicon.png",
   "/imperio-lion.png",
@@ -45,7 +52,7 @@ const loginAttempts = new Map<
   string,
   { attempts: number; blockedUntil: number }
 >();
-let c6SimulationInFlight = false;
+const c6SimulationsInFlight = new Set<string>();
 
 function securityHeaders(contentType = "text/html; charset=utf-8") {
   return {
@@ -346,12 +353,14 @@ function accessPage(url: URL, status = 200) {
   );
 }
 
-function redirect(location: string, cookie?: string) {
+function redirect(location: string, cookies: string | string[] = []) {
   const headers = new Headers({
     ...securityHeaders("text/plain; charset=utf-8"),
     Location: location,
   });
-  if (cookie) headers.set("Set-Cookie", cookie);
+  for (const cookie of Array.isArray(cookies) ? cookies : [cookies]) {
+    if (cookie) headers.append("Set-Cookie", cookie);
+  }
   return new Response(null, { status: 303, headers });
 }
 
@@ -393,6 +402,29 @@ function sessionCookie(request: Request, value: string, maxAge: number) {
   ]
     .filter(Boolean)
     .join("; ");
+}
+
+function c6CredentialCookie(
+  request: Request,
+  value: string,
+  maxAge?: number,
+) {
+  const isSecure = new URL(request.url).protocol === "https:";
+  return [
+    `${C6_CREDENTIAL_COOKIE_NAME}=${encodeURIComponent(value)}`,
+    "Path=/api/c6",
+    "HttpOnly",
+    "SameSite=Strict",
+    isSecure ? "Secure" : "",
+    typeof maxAge === "number" ? `Max-Age=${maxAge}` : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
+function hasSameOrigin(request: Request) {
+  const origin = request.headers.get("Origin");
+  return Boolean(origin && origin === new URL(request.url).origin);
 }
 
 async function handleTokenLogin(request: Request, env: Env) {
@@ -440,26 +472,200 @@ async function handleTokenLogin(request: Request, env: Env) {
 function jsonResponse(
   payload: Record<string, unknown>,
   status = 200,
+  cookies: string | string[] = [],
 ) {
+  const headers = new Headers(
+    securityHeaders("application/json; charset=utf-8"),
+  );
+  for (const cookie of Array.isArray(cookies) ? cookies : [cookies]) {
+    if (cookie) headers.append("Set-Cookie", cookie);
+  }
   return new Response(JSON.stringify(payload), {
     status,
-    headers: securityHeaders("application/json; charset=utf-8"),
+    headers,
   });
 }
 
-async function handleC6Simulation(request: Request, env: Env) {
-  if (!env.C6_CONSIG_USER || !env.C6_CONSIG_PASSWORD) {
+async function requestC6Credentials(request: Request, env: Env) {
+  const encrypted = readCookie(
+    request.headers.get("Cookie"),
+    C6_CREDENTIAL_COOKIE_NAME,
+  );
+  const accessSession = readCookie(
+    request.headers.get("Cookie"),
+    ACCESS_COOKIE_NAME,
+  );
+  const credentials = await decryptC6Credentials(
+    encrypted,
+    env.IMPERIO_ACCESS_COOKIE_SECRET && accessSession
+      ? `${env.IMPERIO_ACCESS_COOKIE_SECRET}:${accessSession}`
+      : "",
+  );
+  return { encrypted, credentials };
+}
+
+async function handleC6CredentialSession(request: Request, env: Env) {
+  if (!env.IMPERIO_ACCESS_COOKIE_SECRET) {
     return jsonResponse(
       {
         ok: false,
-        code: "C6_NOT_CONFIGURED",
-        message: "A integração protegida do C6 ainda não foi configurada.",
+        code: "C6_CREDENTIAL_STORAGE_UNAVAILABLE",
+        message: "A proteção do acesso C6 está temporariamente indisponível.",
       },
       503,
     );
   }
 
-  if (c6SimulationInFlight) {
+  if (request.method === "GET") {
+    const { encrypted, credentials } = await requestC6Credentials(request, env);
+    return jsonResponse(
+      {
+        ok: true,
+        connected: Boolean(credentials),
+        user: credentials ? maskC6User(credentials.user) : "",
+      },
+      200,
+      encrypted && !credentials
+        ? c6CredentialCookie(request, "", 0)
+        : [],
+    );
+  }
+
+  if (!hasSameOrigin(request)) {
+    return jsonResponse(
+      {
+        ok: false,
+        code: "INVALID_ORIGIN",
+        message: "A solicitação de acesso C6 não foi reconhecida.",
+      },
+      403,
+    );
+  }
+
+  if (request.method === "DELETE") {
+    return jsonResponse(
+      {
+        ok: true,
+        connected: false,
+        message: "Acesso C6 removido deste navegador.",
+      },
+      200,
+      c6CredentialCookie(request, "", 0),
+    );
+  }
+
+  if (request.method !== "POST") {
+    return jsonResponse(
+      {
+        ok: false,
+        code: "METHOD_NOT_ALLOWED",
+        message: "Operação não permitida.",
+      },
+      405,
+    );
+  }
+
+  let body: {
+    user?: unknown;
+    password?: unknown;
+    remember?: unknown;
+  };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return jsonResponse(
+      {
+        ok: false,
+        code: "INVALID_REQUEST",
+        message: "Não foi possível ler o acesso informado.",
+      },
+      400,
+    );
+  }
+
+  const credentials = normalizeC6Credentials(body.user, body.password);
+  if (!credentials) {
+    return jsonResponse(
+      {
+        ok: false,
+        code: "C6_INVALID_CREDENTIAL_FORMAT",
+        message: "Informe o usuário e a senha do C6.",
+      },
+      400,
+    );
+  }
+
+  const remember = body.remember === true;
+  const duration = remember
+    ? C6_CREDENTIAL_REMEMBER_SECONDS
+    : C6_CREDENTIAL_SESSION_SECONDS;
+  const accessSession = readCookie(
+    request.headers.get("Cookie"),
+    ACCESS_COOKIE_NAME,
+  );
+  if (!accessSession) {
+    return jsonResponse(
+      {
+        ok: false,
+        code: "ACCESS_SESSION_REQUIRED",
+        message: "Sua sessão do Império IA expirou. Entre novamente.",
+      },
+      401,
+    );
+  }
+  const encrypted = await encryptC6Credentials(
+    credentials.user,
+    credentials.password,
+    `${env.IMPERIO_ACCESS_COOKIE_SECRET}:${accessSession}`,
+    Date.now(),
+    duration,
+  );
+
+  return jsonResponse(
+    {
+      ok: true,
+      connected: true,
+      user: maskC6User(credentials.user),
+      message: remember
+        ? "Acesso C6 protegido neste navegador por até sete dias."
+        : "Acesso C6 protegido durante esta sessão do navegador.",
+    },
+    200,
+    c6CredentialCookie(
+      request,
+      encrypted,
+      remember ? C6_CREDENTIAL_REMEMBER_SECONDS : undefined,
+    ),
+  );
+}
+
+async function handleC6Simulation(request: Request, env: Env) {
+  if (!hasSameOrigin(request)) {
+    return jsonResponse(
+      {
+        ok: false,
+        code: "INVALID_ORIGIN",
+        message: "A solicitação de simulação não foi reconhecida.",
+      },
+      403,
+    );
+  }
+
+  const { encrypted, credentials } = await requestC6Credentials(request, env);
+  if (!credentials) {
+    return jsonResponse(
+      {
+        ok: false,
+        code: "C6_LOGIN_REQUIRED",
+        message: "Conecte seu usuário e senha do C6 antes de simular.",
+      },
+      401,
+      encrypted ? c6CredentialCookie(request, "", 0) : [],
+    );
+  }
+
+  const simulationKey = encrypted;
+  if (c6SimulationsInFlight.has(simulationKey)) {
     return jsonResponse(
       {
         ok: false,
@@ -495,7 +701,7 @@ async function handleC6Simulation(request: Request, env: Env) {
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 55_000);
-  c6SimulationInFlight = true;
+  c6SimulationsInFlight.add(simulationKey);
 
   try {
     const result = await simulateC6Refinancing(
@@ -503,17 +709,20 @@ async function handleC6Simulation(request: Request, env: Env) {
         cpf: String(body.cpf || ""),
         contractNumber: String(body.contractNumber || ""),
         installment: Number(body.installment || 0),
-        user: env.C6_CONSIG_USER,
-        password: env.C6_CONSIG_PASSWORD,
+        user: credentials.user,
+        password: credentials.password,
       },
       { signal: controller.signal },
     );
     return jsonResponse({ ok: true, ...result });
   } catch (error) {
     if (error instanceof C6SimulationError) {
+      const invalidCredentials = error.code === "C6_INVALID_CREDENTIALS";
       const status =
         error.code === "CPF_INVALID"
           ? 400
+          : invalidCredentials
+            ? 401
           : error.code === "C6_SESSION_BUSY" || error.code === "C6_BUSY"
             ? 409
             : error.code === "C6_NO_CONTRACT" ||
@@ -533,6 +742,7 @@ async function handleC6Simulation(request: Request, env: Env) {
           message: error.message,
         },
         status,
+        invalidCredentials ? c6CredentialCookie(request, "", 0) : [],
       );
     }
 
@@ -559,7 +769,7 @@ async function handleC6Simulation(request: Request, env: Env) {
     );
   } finally {
     clearTimeout(timeout);
-    c6SimulationInFlight = false;
+    c6SimulationsInFlight.delete(simulationKey);
   }
 }
 
@@ -592,7 +802,10 @@ const worker = {
     if (url.pathname === "/auth/logout" && request.method === "POST") {
       return redirect(
         "/acesso?saiu=1",
-        sessionCookie(request, "", 0),
+        [
+          sessionCookie(request, "", 0),
+          c6CredentialCookie(request, "", 0),
+        ],
       );
     }
 
@@ -605,6 +818,10 @@ const worker = {
       return redirect(
         `/acesso?return_to=${encodeURIComponent(safeReturnPath(returnPath))}`,
       );
+    }
+
+    if (url.pathname === "/api/c6/session") {
+      return handleC6CredentialSession(request, env);
     }
 
     if (url.pathname === "/api/c6/refin" && request.method === "POST") {

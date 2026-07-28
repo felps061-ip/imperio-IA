@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { createAccessSession } from "../lib/token-auth.mjs";
+
 const testToken = "IMP-TEST-0123-4567-89AB-CDEF-0123-4567-89AB-CDEF";
 const testEnvironment = {
   ASSETS: {
@@ -26,8 +28,7 @@ async function loadWorker() {
   return worker;
 }
 
-async function render() {
-  const worker = await loadWorker();
+async function authenticate(worker) {
   const loginResponse = await worker.fetch(
     new Request("http://localhost/auth/token", {
       method: "POST",
@@ -45,7 +46,12 @@ async function render() {
   assert.equal(loginResponse.status, 303);
   const sessionCookie = loginResponse.headers.get("set-cookie")?.split(";")[0];
   assert.ok(sessionCookie);
+  return sessionCookie;
+}
 
+async function render() {
+  const worker = await loadWorker();
+  const sessionCookie = await authenticate(worker);
   return worker.fetch(
     new Request("http://localhost/", {
       headers: {
@@ -130,6 +136,113 @@ test("server-renders the Império IA product shell", async () => {
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview/);
 });
 
+test("protege o acesso C6 individual em cookie HttpOnly e permite removê-lo", async () => {
+  const worker = await loadWorker();
+  const accessCookie = await authenticate(worker);
+  const connectResponse = await worker.fetch(
+    new Request("http://localhost/api/c6/session", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: accessCookie,
+        origin: "http://localhost",
+      },
+      body: JSON.stringify({
+        user: "usuario_c6_000012",
+        password: "senha-secreta",
+        remember: true,
+      }),
+    }),
+    testEnvironment,
+    testContext,
+  );
+  assert.equal(connectResponse.status, 200);
+  const setCookie = connectResponse.headers.get("set-cookie") ?? "";
+  assert.match(setCookie, /imperio_c6_credentials=/);
+  assert.match(setCookie, /HttpOnly/i);
+  assert.match(setCookie, /SameSite=Strict/i);
+  assert.match(setCookie, /Path=\/api\/c6/i);
+  assert.match(setCookie, /Max-Age=604800/i);
+  assert.doesNotMatch(setCookie, /usuario_c6|senha-secreta/);
+
+  const c6Cookie = setCookie.split(";")[0];
+  const statusResponse = await worker.fetch(
+    new Request("http://localhost/api/c6/session", {
+      headers: { cookie: `${accessCookie}; ${c6Cookie}` },
+    }),
+    testEnvironment,
+    testContext,
+  );
+  assert.equal(statusResponse.status, 200);
+  assert.deepEqual(await statusResponse.json(), {
+    ok: true,
+    connected: true,
+    user: "••••••••0012",
+  });
+
+  const otherAccessSession = await createAccessSession(
+    testEnvironment.IMPERIO_ACCESS_COOKIE_SECRET,
+    Date.now() + 5_000,
+  );
+  const otherSessionResponse = await worker.fetch(
+    new Request("http://localhost/api/c6/session", {
+      headers: {
+        cookie: `imperio_access=${otherAccessSession}; ${c6Cookie}`,
+      },
+    }),
+    testEnvironment,
+    testContext,
+  );
+  assert.equal(otherSessionResponse.status, 200);
+  assert.deepEqual(await otherSessionResponse.json(), {
+    ok: true,
+    connected: false,
+    user: "",
+  });
+
+  const disconnectResponse = await worker.fetch(
+    new Request("http://localhost/api/c6/session", {
+      method: "DELETE",
+      headers: {
+        cookie: `${accessCookie}; ${c6Cookie}`,
+        origin: "http://localhost",
+      },
+    }),
+    testEnvironment,
+    testContext,
+  );
+  assert.equal(disconnectResponse.status, 200);
+  assert.match(
+    disconnectResponse.headers.get("set-cookie") ?? "",
+    /Max-Age=0/i,
+  );
+});
+
+test("exige o acesso individual C6 antes de iniciar a simulação", async () => {
+  const worker = await loadWorker();
+  const accessCookie = await authenticate(worker);
+  const response = await worker.fetch(
+    new Request("http://localhost/api/c6/refin", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: accessCookie,
+        origin: "http://localhost",
+      },
+      body: JSON.stringify({ cpf: "52998224725" }),
+    }),
+    testEnvironment,
+    testContext,
+  );
+
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), {
+    ok: false,
+    code: "C6_LOGIN_REQUIRED",
+    message: "Conecte seu usuário e senha do C6 antes de simular.",
+  });
+});
+
 test("keeps the real client case and source PDFs out of the app", async () => {
   const [page, layout, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
@@ -156,6 +269,8 @@ test("keeps the real client case and source PDFs out of the app", async () => {
   assert.match(page, /Calculadora do Cidadão/);
   assert.match(page, /Abrir versão oficial/);
   assert.match(page, /Simular no C6/);
+  assert.match(page, /Usuário C6/);
+  assert.match(page, /Lembrar neste computador por 7 dias/);
   assert.doesNotMatch(page, /pdf\.destroy\(\)/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.doesNotMatch(page, /const contracts|Cliente anonimizado|Caso demonstrativo/);

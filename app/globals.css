@@ -3264,6 +3264,144 @@ a:focus-visible {
   padding: 1.45rem;
 }
 
+.c6-login-form {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1.15rem;
+}
+
+.c6-login-form > label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.c6-login-form > label > span {
+  color: #35405a;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.c6-login-form input[type="text"],
+.c6-login-form input[type="password"] {
+  background: #fbfcfe;
+  border: 1px solid #cfd6e2;
+  border-radius: 10px;
+  color: #172039;
+  font-size: 0.83rem;
+  min-height: 2.8rem;
+  outline: none;
+  padding: 0 0.78rem;
+  width: 100%;
+}
+
+.c6-login-form input:focus {
+  border-color: #4569e8;
+  box-shadow: 0 0 0 3px rgba(69, 105, 232, 0.1);
+}
+
+.c6-login-form .c6-remember {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+}
+
+.c6-login-form .c6-remember input {
+  accent-color: #3158d7;
+  height: 1rem;
+  margin: 0;
+  width: 1rem;
+}
+
+.c6-login-form .c6-remember span {
+  color: #697286;
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.c6-login-submit {
+  background: linear-gradient(135deg, #172039, #3158d7);
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+  min-height: 2.8rem;
+}
+
+.c6-login-submit:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.c6-connected-account {
+  align-items: center;
+  background: #effaf4;
+  border: 1px solid #ccead9;
+  border-radius: 12px;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin-top: 1.15rem;
+  padding: 0.8rem;
+}
+
+.c6-connected-account > span {
+  align-items: center;
+  background: #d8f1e3;
+  border-radius: 50%;
+  color: #167248;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 900;
+  height: 1.8rem;
+  justify-content: center;
+  width: 1.8rem;
+}
+
+.c6-connected-account div {
+  min-width: 0;
+}
+
+.c6-connected-account strong {
+  color: #176c50;
+  display: block;
+  font-size: 0.75rem;
+}
+
+.c6-connected-account p {
+  color: #4f7968;
+  font-size: 0.7rem;
+  margin-top: 0.1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.c6-connected-account button {
+  background: transparent;
+  border: 0;
+  color: #9a3f3f;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.4rem;
+}
+
+.c6-credential-message {
+  background: #f5f7fb;
+  border-radius: 9px;
+  color: #5e687c !important;
+  font-size: 0.7rem !important;
+  margin-top: 0.75rem !important;
+  padding: 0.65rem 0.7rem;
+}
+
+.c6-credential-message.error {
+  background: #fff1ef;
+  color: #a84035 !important;
+}
+
 .c6-setup-card ol {
   display: grid;
   gap: 0.9rem;
@@ -3308,7 +3446,25 @@ a:focus-visible {
   border: 1px solid #d6ebde;
   border-radius: 10px;
   color: #28704d !important;
+  margin-top: 0.9rem !important;
   padding: 0.75rem 0.8rem;
+}
+
+.c6-flow-summary {
+  border-top: 1px solid #edf0f5;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+}
+
+.c6-flow-summary strong {
+  color: #28334a;
+  display: block;
+  font-size: 0.76rem;
+  margin-bottom: 0.2rem;
+}
+
+.c6-flow-summary p {
+  font-size: 0.72rem;
 }
 
 .c6-setup-actions {
